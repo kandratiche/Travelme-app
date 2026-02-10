@@ -19,6 +19,9 @@ import { TRENDING_EXPERIENCES } from "../../../constants/mockData";
 import { AuthContext } from "@/context/authContext";
 import { Button } from "react-native-paper";
 import i18n from "@/app/i18n";
+import { useTranslation } from "react-i18next";
+import { ALMATY_ITINERARY } from "../../../constants/mockData";
+import { SplitTitle } from "@/components/ui/SplitTitle";
 
 const QUICK_ACTIONS = [
   { id: "date", labelKey: "home.dateNight", icon: "heart" },
@@ -30,9 +33,12 @@ const QUICK_ACTIONS = [
 ];
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [isChatting, setIsChatting] = useState(false);
   const { user, loading } = useContext(AuthContext);
+  const itinerary = ALMATY_ITINERARY;
 
   useEffect(() => {
     if (!loading && !user) router.replace("/");
@@ -41,9 +47,10 @@ export default function HomeScreen() {
   const handleSend = () => {
     if (!input.trim() && !isThinking) return;
     setIsThinking(true);
+    setIsChatting(false);
     setTimeout(() => {
       setIsThinking(false);
-      router.push("/timeline");
+      setIsChatting(true);
     }, 1500);
   };
 
@@ -59,6 +66,32 @@ export default function HomeScreen() {
     router.replace({ pathname: "/auth/city-select", params: { new: "false" } });
   };
 
+  const handleEndChat = () => {
+    setIsChatting(false);
+    setInput("");
+  };
+
+  const handleReplacePlace = (id: string) => {
+
+  };
+
+  const handleRemovePlace = (id: string) => {
+
+  }
+
+  const safetyColor = (level: string) => {
+    switch (level) {
+      case "safe":
+        return "#10B981";
+      case "warning":
+        return "#F59E0B";
+      case "danger":
+        return "#EF4444";
+      default:
+        return "#10B981";
+    }
+  };
+
   return (
     <LightScreen>
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -68,7 +101,7 @@ export default function HomeScreen() {
               <Ionicons name="person" size={24} color="#2DD4BF" />
             </View>
             <View style={styles.profileText}>
-              <BodyText style={styles.profileName}>{user?.name || i18n.t("home.guestMessage")}</BodyText>
+              <BodyText style={styles.profileName}>{user?.name || "Guest"}</BodyText>
               <CaptionText style={styles.profileStatus}>{i18n.t("home.profileOnline")}</CaptionText>
             </View>
           </TouchableOpacity>
@@ -95,18 +128,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </GlassCardOnLight>
 
-          <CaptionText style={styles.sectionLabel}>{i18n.t("home.quickActions")}</CaptionText>
-          <View style={styles.quickActionsContainer}>
-            {QUICK_ACTIONS.map((action) => (
-              <TouchableOpacity key={action.id} onPress={handleQuickAction} activeOpacity={0.8}>
-                <View style={styles.quickActionButton}>
-                  <Ionicons name={action.icon as any} size={18} color="#2DD4BF" style={styles.quickActionIcon} />
-                  <Text style={styles.quickActionLabel}>{i18n.t(action.labelKey)}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
           {isThinking && (
             <GlassCardOnLight style={styles.thinkingCard}>
               <View style={styles.thinkingDot} />
@@ -114,26 +135,123 @@ export default function HomeScreen() {
               <BodyText style={styles.thinkingText}>{i18n.t("home.aiThinking")}</BodyText>
             </GlassCardOnLight>
           )}
-
-          <HeadingText style={styles.sectionHeading}>{i18n.t("home.trending")}</HeadingText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingContainer}>
-            {TRENDING_EXPERIENCES.map((exp) => (
-              <TouchableOpacity key={exp.id} onPress={() => router.push("/timeline")} activeOpacity={0.9} style={styles.trendingCardWrapper}>
-                <GlassCardOnLight style={styles.trendingCard}>
-                  <View style={styles.trendingImageWrapper}>
-                    <Image source={{ uri: exp.imageUrl }} style={styles.trendingImage} resizeMode="cover" />
-                    <View style={styles.trendingOverlay}>
-                      <Text style={styles.trendingTitle} numberOfLines={2}>{exp.title}</Text>
-                      <View style={styles.trendingScoreRow}>
-                        <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                        <Text style={styles.trendingScore}>{exp.safetyScore}%</Text>
-                      </View>
+          
+          {isChatting ? (
+            <ScrollView style={styles.chatContainer}>
+              <SplitTitle style={{ marginBottom: 16 }} first="YOUR " second="TRIP"/>
+              <View style={styles.stopsContainer}>
+                {itinerary.stops.map((stop, index) => (
+                  <View key={stop.id} style={styles.stopRow}>
+                    <View style={styles.timelineColumn}>
+                      <View
+                        style={[
+                          styles.timelineDot,
+                          { backgroundColor: safetyColor(stop.safetyLevel) },
+                        ]}
+                      />
+                      {index < itinerary.stops.length - 1 && <View style={styles.timelineLine} />}
+                    </View>
+      
+                    <View style={styles.stopContent}>
+                      <GlassCardOnLight style={styles.stopCard}>
+                        <View style={styles.stopCardContent}>
+                          <View style={styles.stopHeader}>
+                            <Text style={styles.stopTime}>{stop.time}</Text>
+                            <View style={styles.safeBadge}>
+                              <Text style={styles.safeBadgeText}>{t('timeline.safeZone')}</Text>
+                            </View>
+                          </View>
+      
+                          <BodyText style={styles.stopTitle}>{stop.title}</BodyText>
+                          <CaptionText style={styles.stopDescription}>
+                            {stop.title.includes("Meeting")
+                              ? t('timeline.meetingPoint')
+                              : t('timeline.nextStop')}
+                          </CaptionText>
+      
+                          <View style={styles.stopImageWrapper}>
+                            <Image
+                              source={{ uri: stop.imageUrl }}
+                              style={styles.stopImage}
+                              resizeMode="cover"
+                            />
+                            <View style={styles.visibilityOverlay}>
+                              <Ionicons name="eye-outline" size={12} color="#FFF" style={styles.iconSmall} />
+                              <Text style={styles.visibilityText}>{t('timeline.highVisibility')}</Text>
+                            </View>
+                          </View>
+      
+                          <View style={styles.walkInfo}>
+                            <Ionicons name="walk-outline" size={14} color="#64748B" style={styles.iconSmall} />
+                            <CaptionText style={styles.walkText}>
+                              {t('timeline.walk')}: 15 {t('timeline.min')} • {t('timeline.flatTerrain')}
+                            </CaptionText>
+                          </View>
+                          <View style={styles.stopButtons}>
+                            <Button 
+                              style={styles.stopReplaceButton} 
+                              labelStyle={styles.stopReplaceButtonText}
+                              onPress={() => handleReplacePlace(stop.id)}
+                            >
+                              Replace
+                            </Button>
+                            <Button 
+                              style={styles.stopRemoveButton}
+                              labelStyle={styles.stopRemoveButtonText}
+                              onPress={() => handleRemovePlace(stop.id)}
+                            >
+                              Remove
+                            </Button>
+                          </View>
+                        </View>
+                      </GlassCardOnLight>
                     </View>
                   </View>
-                </GlassCardOnLight>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                ))}
+              </View>
+              <Button 
+                style={styles.chatEndButton} 
+                labelStyle={styles.chatEndButtonText}
+                onPress={handleEndChat}
+              >
+                End Chat
+              </Button>
+            </ScrollView>
+          ) : (
+            <View>
+              <CaptionText style={styles.sectionLabel}>{i18n.t("home.quickActions")}</CaptionText>
+              <View style={styles.quickActionsContainer}>
+                {QUICK_ACTIONS.map((action) => (
+                  <TouchableOpacity key={action.id} onPress={handleQuickAction} activeOpacity={0.8}>
+                    <View style={styles.quickActionButton}>
+                      <Ionicons name={action.icon as any} size={18} color="#2DD4BF" style={styles.quickActionIcon} />
+                      <Text style={styles.quickActionLabel}>{i18n.t(action.labelKey)}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <HeadingText style={styles.sectionHeading}>{i18n.t("home.trending")}</HeadingText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingContainer}>
+                {TRENDING_EXPERIENCES.map((exp) => (
+                  <TouchableOpacity key={exp.id} onPress={() => router.push("/timeline")} activeOpacity={0.9} style={styles.trendingCardWrapper}>
+                    <GlassCardOnLight style={styles.trendingCard}>
+                      <View style={styles.trendingImageWrapper}>
+                        <Image source={{ uri: exp.imageUrl }} style={styles.trendingImage} resizeMode="cover" />
+                        <View style={styles.trendingOverlay}>
+                          <Text style={styles.trendingTitle} numberOfLines={2}>{exp.title}</Text>
+                          <View style={styles.trendingScoreRow}>
+                            <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                            <Text style={styles.trendingScore}>{exp.safetyScore}%</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </GlassCardOnLight>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
         </View>
       </ScrollView>
       <SafetyButton variant="floating" />
@@ -370,5 +488,149 @@ const styles = StyleSheet.create({
   guestButtonText: {
     color: "#0F172A",
     fontWeight: "600",
+  },
+  chatContainer: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  chatHeadingText: {
+    marginBottom: 16,
+    color: "#0F172A" 
+  },
+  chatEndButton: {
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: "#2DD4BF",
+  },
+  chatEndButtonText: {
+    color: "#FFF"
+  },
+  stopsContainer: {
+    marginLeft: 12,
+  },
+  stopRow: {
+    flexDirection: "row",
+    marginBottom: 8,
+  },
+  timelineColumn: {
+    alignItems: "center",
+    width: 32,
+  },
+  timelineDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: "#F8FAFC",
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: "#A78BFA",
+    marginVertical: 4,
+    minHeight: 40,
+    opacity: 0.5,
+  },
+  stopContent: {
+    flex: 1,
+    marginLeft: 16,
+    paddingBottom: 24,
+  },
+  stopCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    padding: 0,
+  },
+  stopCardContent: {
+    padding: 14,
+  },
+  stopHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  stopTime: {
+    fontFamily: "Montserrat_700Bold",
+    fontSize: 18,
+    color: "#0F172A",
+  },
+  safeBadge: {
+    backgroundColor: "#10B981",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  safeBadgeText: {
+    color: "#FFF",
+    fontWeight: "700",
+    fontSize: 10,
+  },
+  stopTitle: {
+    fontWeight: "700",
+    fontSize: 16,
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  stopDescription: {
+    color: "#64748B",
+    marginBottom: 10,
+  },
+  stopImageWrapper: {
+    height: 100,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  stopImage: {
+    width: "100%",
+    height: "100%",
+  },
+  visibilityOverlay: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  iconSmall: {
+    marginRight: 4,
+  },
+  visibilityText: {
+    color: "#FFF",
+    fontSize: 11,
+  },
+  walkInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  walkText: {
+    color: "#64748B",
+  },
+  stopButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 15,
+  },
+  stopReplaceButton: {
+    flex: 1,
+    backgroundColor: "#2DD4BF"
+  },
+  stopReplaceButtonText: {
+    color: "#FFF"
+  },
+  stopRemoveButton: {
+    flex: 1,
+    backgroundColor: "rgba(255, 112, 112, 1)"
+  },
+  stopRemoveButtonText: {
+    color: "#FFF"
   },
 });
