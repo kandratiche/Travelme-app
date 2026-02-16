@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LightScreen } from "../../components/ui/LightScreen";
 import { BodyText } from "../../components/ui/ThemedText";
-import { INTERESTS } from "../../constants/mockData";
+import { INTERESTS } from "@/constants/mockData";
 import { AuthContext } from "@/context/authContext";
 import supabase from "@/lib/supabaseClient";
 import { useTranslation } from "react-i18next";

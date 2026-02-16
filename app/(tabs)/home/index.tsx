@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,28 +8,35 @@ import {
   ActivityIndicator,
   Image,
   StyleSheet,
+  Alert,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { LightScreen } from "../../../components/ui/LightScreen";
-import { GlassCardOnLight } from "../../../components/ui/GlassCard";
-import { SafetyButton } from "../../../components/SafetyButton";
-import { BodyText, HeadingText, CaptionText } from "../../../components/ui/ThemedText";
+import { LightScreen } from "@/components/ui/LightScreen";
+import { GlassCardOnLight } from "@/components/ui/GlassCard";
+import { SafetyButton } from "@/components/SafetyButton";
+import { BodyText, HeadingText, CaptionText } from "@/components/ui/ThemedText";
 import { TRENDING_EXPERIENCES } from "../../../constants/mockData";
 import { AuthContext } from "@/context/authContext";
 import { Button } from "react-native-paper";
 import i18n from "@/app/i18n";
 import { useTranslation } from "react-i18next";
-import { ALMATY_ITINERARY } from "../../../constants/mockData";
-import { SplitTitle } from "@/components/ui/SplitTitle";
+import { generateAIResponse, replaceOption, getCachedPlaces } from "@/lib/openai";
+import { getUserLocation, formatDistance, type UserLocation } from "@/lib/location";
+import PlaceDetailModal from "@/components/PlaceDetailModal";
+import RouteMapModal from "@/components/RouteMapModal";
+import type { TimelineStop, AIResponse, StructuredSection, SectionOption } from "@/types";
 
 const QUICK_ACTIONS = [
-  { id: "date", labelKey: "home.dateNight", icon: "heart" },
-  { id: "budget", labelKey: "home.budgetEats", icon: "wallet" },
-  { id: "views", labelKey: "home.bestViews", icon: "eye" },
-  { id: "culture", labelKey: "home.culture", icon: "book" },
-  { id: "nature", labelKey: "home.nature", icon: "leaf" },
-  { id: "local", labelKey: "home.localVibes", icon: "people" },
+  { id: "coffee", icon: "cafe", prompt: "хочу кофе", label: "Кофе" },
+  { id: "food", icon: "restaurant", prompt: "хочу поесть", label: "Еда" },
+  { id: "views", icon: "eye", prompt: "красивые виды", label: "Виды" },
+  { id: "culture", icon: "book", prompt: "культурный тур по городу", label: "Культура" },
+  { id: "nature", icon: "leaf", prompt: "прогулка на природе", label: "Природа" },
+  { id: "evening", icon: "moon", prompt: "план на вечер, поужинать и куда-нибудь сходить", label: "Вечер" },
+  { id: "business", icon: "briefcase", prompt: "свободен вечером в командировке, поужинать спокойно", label: "Бизнес" },
+  { id: "budget", icon: "wallet", prompt: "что-то классное и недорогое", label: "Бюджет" },
 ];
 
 export default function HomeScreen() {
@@ -37,29 +44,62 @@ export default function HomeScreen() {
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isChatting, setIsChatting] = useState(false);
+  const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [selectedStop, setSelectedStop] = useState<TimelineStop | null>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [routeMapVisible, setRouteMapVisible] = useState(false);
   const { user, loading } = useContext(AuthContext);
-  const itinerary = ALMATY_ITINERARY;
+  const scrollRef = useRef<ScrollView>(null);
+
+  const openDetail = (stop: TimelineStop) => {
+    setSelectedStop(stop);
+    setDetailVisible(true);
+  };
 
   useEffect(() => {
     if (!loading && !user) router.replace("/");
   }, [loading, user]);
 
-  const handleSend = () => {
-    if (!input.trim() && !isThinking) return;
+  useEffect(() => {
+    getUserLocation().then(setUserLocation).catch(() => {});
+  }, []);
+
+  const callAI = async (prompt: string) => {
+    const city = user?.home_city || "Almaty";
+    const interests = user?.interests || [];
     setIsThinking(true);
     setIsChatting(false);
-    setTimeout(() => {
-      setIsThinking(false);
+    setAiResponse(null);
+    setErrorMsg(null);
+
+    try {
+      const result = await generateAIResponse({ prompt, city, interests, userLocation });
+      setAiResponse(result);
       setIsChatting(true);
-    }, 1500);
+    } catch (err: any) {
+      console.error("AI Error:", err);
+      const msg = err?.message || "Something went wrong";
+      setErrorMsg(msg);
+      if (Platform.OS === "web") {
+        alert("AI Error: " + msg);
+      } else {
+        Alert.alert("AI Error", msg);
+      }
+    } finally {
+      setIsThinking(false);
+    }
   };
 
-  const handleQuickAction = () => {
-    setIsThinking(true);
-    setTimeout(() => {
-      setIsThinking(false);
-      router.push("/timeline");
-    }, 1500);
+  const handleSend = () => {
+    if (!input.trim() || isThinking) return;
+    callAI(input.trim());
+  };
+
+  const handleQuickAction = (prompt: string) => {
+    setInput(prompt);
+    callAI(prompt);
   };
 
   const handleChangeCity = () => {
@@ -68,29 +108,148 @@ export default function HomeScreen() {
 
   const handleEndChat = () => {
     setIsChatting(false);
+    setAiResponse(null);
     setInput("");
   };
 
-  const handleReplacePlace = (id: string) => {
 
+  const handleReplace = (sectionIdx: number, optionIdx: number) => {
+    if (!aiResponse) return;
+    const places = getCachedPlaces();
+    const updated = replaceOption(aiResponse, sectionIdx, optionIdx, places, userLocation);
+    setAiResponse(updated);
   };
 
-  const handleRemovePlace = (id: string) => {
 
-  }
+  const getRouteStops = (resp: AIResponse): TimelineStop[] => {
+    return resp.sections
+      .map(s => s.options[0]?.place)
+      .filter(Boolean);
+  };
+
 
   const safetyColor = (level: string) => {
     switch (level) {
-      case "safe":
-        return "#10B981";
-      case "warning":
-        return "#F59E0B";
-      case "danger":
-        return "#EF4444";
-      default:
-        return "#10B981";
+      case "safe": return "#10B981";
+      case "warning": return "#F59E0B";
+      case "danger": return "#EF4444";
+      default: return "#10B981";
     }
   };
+
+  const handleEvents = async () => {
+    console.log("Doing nothing yet...");
+  }
+
+
+  const renderStructuredResponse = (resp: AIResponse) => (
+    <View style={styles.chatContainer}>
+      <Text style={styles.responseTitle}>{resp.title}</Text>
+
+      {resp.sections.map((section, sIdx) => (
+        <View key={`section-${sIdx}`} style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionEmojiCircle}>
+              <Text style={styles.sectionEmoji}>{section.emoji}</Text>
+            </View>
+            <View style={styles.sectionHeaderText}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              {section.timeRange ? (
+                <Text style={styles.sectionTime}>{section.timeRange}</Text>
+              ) : null}
+            </View>
+          </View>
+
+          {section.options.map((opt, oIdx) => (
+            <View key={opt.place.id} style={styles.optionCard}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => openDetail(opt.place)}
+                style={styles.optionTouchable}
+              >
+                <View style={styles.optionNumberBadge}>
+                  <Text style={styles.optionNumberText}>{oIdx + 1}</Text>
+                </View>
+
+                {/* Image thumbnail */}
+                {opt.place.imageUrl ? (
+                  <Image
+                    source={{ uri: opt.place.imageUrl }}
+                    style={styles.optionImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.optionImage, styles.optionImagePlaceholder]}>
+                    <Ionicons name="image-outline" size={20} color="#CBD5E1" />
+                  </View>
+                )}
+
+                <View style={styles.optionBody}>
+                  <View style={styles.optionTitleRow}>
+                    <Text style={styles.optionTitle} numberOfLines={1}>{opt.place.title}</Text>
+                    {opt.place.verified && (
+                      <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    )}
+                  </View>
+
+                  <Text style={styles.optionWhy} numberOfLines={2}>{opt.why}</Text>
+
+                  <View style={styles.optionMeta}>
+                    {opt.budgetHint ? (
+                      <View style={styles.optionChip}>
+                        <Text style={styles.optionBudgetText}>{opt.budgetHint}</Text>
+                      </View>
+                    ) : null}
+                    {opt.place.rating != null && opt.place.rating > 0 ? (
+                      <View style={styles.optionChip}>
+                        <Ionicons name="star" size={10} color="#FACC15" />
+                        <Text style={styles.optionChipText}>{opt.place.rating.toFixed(1)}</Text>
+                      </View>
+                    ) : null}
+                    {opt.place.distanceKm != null ? (
+                      <View style={styles.optionChip}>
+                        <Ionicons name="navigate-outline" size={10} color="#A78BFA" />
+                        <Text style={styles.optionChipText}>{formatDistance(opt.place.distanceKm)}</Text>
+                      </View>
+                    ) : null}
+                    <View style={[styles.optionChip, { backgroundColor: safetyColor(opt.place.safetyLevel) + "18" }]}>
+                      <Ionicons name="shield-checkmark" size={10} color={safetyColor(opt.place.safetyLevel)} />
+                      <Text style={[styles.optionChipText, { color: safetyColor(opt.place.safetyLevel) }]}>
+                        {opt.place.safetyScore}%
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => handleReplace(sIdx, oIdx)}
+                style={styles.replaceButton}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="refresh-outline" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ))}
+
+      <TouchableOpacity
+        style={styles.showRouteButton}
+        onPress={() => setRouteMapVisible(true)}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="map" size={20} color="#FFF" />
+        <Text style={styles.showRouteButtonText}>Показать маршрут</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.newSearchButton} onPress={handleEndChat} activeOpacity={0.85}>
+        <Text style={styles.newSearchButtonText}>Новый поиск</Text>
+        <Ionicons name="arrow-forward" size={18} color="#FFF" />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <LightScreen>
@@ -135,97 +294,26 @@ export default function HomeScreen() {
               <BodyText style={styles.thinkingText}>{i18n.t("home.aiThinking")}</BodyText>
             </GlassCardOnLight>
           )}
-          
-          {isChatting ? (
-            <ScrollView style={styles.chatContainer}>
-              <SplitTitle style={{ marginBottom: 16 }} first="YOUR " second="TRIP"/>
-              <View style={styles.stopsContainer}>
-                {itinerary.stops.map((stop, index) => (
-                  <View key={stop.id} style={styles.stopRow}>
-                    <View style={styles.timelineColumn}>
-                      <View
-                        style={[
-                          styles.timelineDot,
-                          { backgroundColor: safetyColor(stop.safetyLevel) },
-                        ]}
-                      />
-                      {index < itinerary.stops.length - 1 && <View style={styles.timelineLine} />}
-                    </View>
-      
-                    <View style={styles.stopContent}>
-                      <GlassCardOnLight style={styles.stopCard}>
-                        <View style={styles.stopCardContent}>
-                          <View style={styles.stopHeader}>
-                            <Text style={styles.stopTime}>{stop.time}</Text>
-                            <View style={styles.safeBadge}>
-                              <Text style={styles.safeBadgeText}>{t('timeline.safeZone')}</Text>
-                            </View>
-                          </View>
-      
-                          <BodyText style={styles.stopTitle}>{stop.title}</BodyText>
-                          <CaptionText style={styles.stopDescription}>
-                            {stop.title.includes("Meeting")
-                              ? t('timeline.meetingPoint')
-                              : t('timeline.nextStop')}
-                          </CaptionText>
-      
-                          <View style={styles.stopImageWrapper}>
-                            <Image
-                              source={{ uri: stop.imageUrl }}
-                              style={styles.stopImage}
-                              resizeMode="cover"
-                            />
-                            <View style={styles.visibilityOverlay}>
-                              <Ionicons name="eye-outline" size={12} color="#FFF" style={styles.iconSmall} />
-                              <Text style={styles.visibilityText}>{t('timeline.highVisibility')}</Text>
-                            </View>
-                          </View>
-      
-                          <View style={styles.walkInfo}>
-                            <Ionicons name="walk-outline" size={14} color="#64748B" style={styles.iconSmall} />
-                            <CaptionText style={styles.walkText}>
-                              {t('timeline.walk')}: 15 {t('timeline.min')} • {t('timeline.flatTerrain')}
-                            </CaptionText>
-                          </View>
-                          <View style={styles.stopButtons}>
-                            <Button 
-                              style={styles.stopReplaceButton} 
-                              labelStyle={styles.stopReplaceButtonText}
-                              onPress={() => handleReplacePlace(stop.id)}
-                            >
-                              Replace
-                            </Button>
-                            <Button 
-                              style={styles.stopRemoveButton}
-                              labelStyle={styles.stopRemoveButtonText}
-                              onPress={() => handleRemovePlace(stop.id)}
-                            >
-                              Remove
-                            </Button>
-                          </View>
-                        </View>
-                      </GlassCardOnLight>
-                    </View>
-                  </View>
-                ))}
-              </View>
-              <Button 
-                style={styles.chatEndButton} 
-                labelStyle={styles.chatEndButtonText}
-                onPress={handleEndChat}
-              >
-                End Chat
-              </Button>
-            </ScrollView>
-          ) : (
+
+          {errorMsg && !isThinking && !isChatting ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="warning-outline" size={32} color="#F59E0B" />
+              <Text style={styles.errorText}>{errorMsg}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={() => input.trim() && callAI(input.trim())} activeOpacity={0.8}>
+                <Text style={styles.retryButtonText}>Попробовать снова</Text>
+              </TouchableOpacity>
+            </View>
+          ) : isChatting && aiResponse ? (
+            renderStructuredResponse(aiResponse)
+          ) : !isThinking ? (
             <View>
               <CaptionText style={styles.sectionLabel}>{i18n.t("home.quickActions")}</CaptionText>
               <View style={styles.quickActionsContainer}>
                 {QUICK_ACTIONS.map((action) => (
-                  <TouchableOpacity key={action.id} onPress={handleQuickAction} activeOpacity={0.8}>
+                  <TouchableOpacity key={action.id} onPress={() => handleQuickAction(action.prompt)} activeOpacity={0.8}>
                     <View style={styles.quickActionButton}>
                       <Ionicons name={action.icon as any} size={18} color="#2DD4BF" style={styles.quickActionIcon} />
-                      <Text style={styles.quickActionLabel}>{i18n.t(action.labelKey)}</Text>
+                      <Text style={styles.quickActionLabel}>{action.label}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -249,11 +337,25 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+              <TouchableOpacity style={styles.eventsButton} onPress={handleEvents} activeOpacity={0.85}>
+                <Text style={styles.eventsButtonText}>События в {user?.home_city}</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+              </TouchableOpacity>
             </View>
-          )}
-
+          ) : null}
         </View>
       </ScrollView>
+
+      <PlaceDetailModal
+        visible={detailVisible}
+        stop={selectedStop}
+        onClose={() => setDetailVisible(false)}
+      />
+      <RouteMapModal
+        visible={routeMapVisible}
+        stops={aiResponse ? getRouteStops(aiResponse) : []}
+        onClose={() => setRouteMapVisible(false)}
+      />
       <SafetyButton variant="floating" />
       {!user && (
         <View style={styles.guestContainer}>
@@ -269,368 +371,155 @@ export default function HomeScreen() {
   );
 }
 
-// стили оставляем без изменений
-
-
 const styles = StyleSheet.create({
-  scrollContainer: {
-    paddingBottom: 120,
-  },
+  scrollContainer: { paddingBottom: 120 },
   headerContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 24,
+    paddingHorizontal: 24, paddingTop: 56, paddingBottom: 16,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24,
   },
-  contentContainer: {
-    paddingHorizontal: 24,
-  },
-  profileButton: { 
-    flexDirection: "row", 
-    alignItems: "center" 
-  },
+  contentContainer: { paddingHorizontal: 24 },
+  profileButton: { flexDirection: "row", alignItems: "center" },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)",
   },
-  profileText: { 
-    marginLeft: 12 
-  },
-  profileName: { 
-    fontWeight: "600", 
-    color: "#0F172A" 
-  },
-  profileStatus: { 
-    color: "#10B981", 
-    fontSize: 13 
-  },
+  profileText: { marginLeft: 12 },
+  profileName: { fontWeight: "600", color: "#0F172A" },
+  profileStatus: { color: "#10B981", fontSize: 13 },
   cityContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.9)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)",
   },
-  cityIcon: { 
-    marginRight: 4 
-  },
-  cityText: { 
-    color: "#2DD4BF", 
-    fontSize: 13 
-  },
-
-  inputCard: { 
-    borderRadius: 24, 
-    marginBottom: 20 
-  },
-  inputCardContent: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    paddingVertical: 12, 
-    paddingHorizontal: 16 
-  },
-  input: { 
-    flex: 1, 
-    minWidth: 0, 
-    color: "#0F172A", 
-    fontSize: 16, 
-    paddingVertical: 4 
-  },
+  cityIcon: { marginRight: 4 },
+  cityText: { color: "#2DD4BF", fontSize: 13 },
+  inputCard: { borderRadius: 24, marginBottom: 20 },
+  inputCardContent: { flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16 },
+  input: { flex: 1, minWidth: 0, color: "#0F172A", fontSize: 16, paddingVertical: 4 },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#2DD4BF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 12,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: "#2DD4BF",
+    alignItems: "center", justifyContent: "center", marginLeft: 12,
   },
-
-  sectionLabel: { 
-    marginBottom: 12, 
-    color: "#64748B" 
-  },
-  quickActionsContainer: { 
-    flexDirection: "row", 
-    flexWrap: "wrap", 
-    gap: 10, 
-    marginBottom: 28 
-  },
+  sectionLabel: { marginBottom: 12, color: "#64748B" },
+  quickActionsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 },
   quickActionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, flexDirection: "row", alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.9)", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)",
   },
-  quickActionIcon: { 
-    marginRight: 6 
-  },
-  quickActionLabel: { 
-    color: "#475569", 
-    fontSize: 14, 
-    fontWeight: "500" 
-  },
-
-  thinkingCard: {
-    borderRadius: 16,
-    marginBottom: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-  thinkingDot: { 
-    width: 8, 
-    height: 8, 
-    borderRadius: 4, 
-    backgroundColor: "#A78BFA", 
-    marginRight: 8, 
-    opacity: 0.8 
-  },
-  thinkingSpinner: { 
-    marginRight: 8 
-  },
-  thinkingText: { 
-    color: "#A78BFA" 
-  },
-
-  sectionHeading: { 
-    marginBottom: 16, 
-    color: "#0F172A" 
-  },
-  trendingContainer: { 
-    gap: 16, 
-    paddingRight: 24 
-  },
-  trendingCardWrapper: { 
-    width: 180 
-  },
-  trendingCard: { 
-    borderRadius: 20, 
-    overflow: "hidden", 
-    padding: 0 
-  },
-  trendingImageWrapper: { 
-    height: 120, 
-    borderRadius: 16, 
-    overflow: "hidden", 
-    position: "relative" 
-  },
-  trendingImage: { 
-    width: "100%", 
-    height: "100%" 
-  },
-  trendingOverlay: { 
-    position: "absolute", 
-    left: 0, 
-    right: 0, 
-    bottom: 0, 
-    padding: 12, 
-    backgroundColor: "rgba(0,0,0,0.5)" 
-  },
-  trendingTitle: { 
-    color: "#FFF", 
-    fontWeight: "700", 
-    fontSize: 15 
-  },
-  trendingScoreRow: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    marginTop: 4 
-  },
-  trendingScore: { 
-    color: "rgba(255,255,255,0.9)", 
-    fontSize: 12, 
-    marginLeft: 4 
-  },
-  guestContainer: {
-    position: "absolute",
-    bottom: 60,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    padding: 20,
-    marginTop: 16,
-  },
+  quickActionIcon: { marginRight: 6 },
+  quickActionLabel: { color: "#475569", fontSize: 14, fontWeight: "500" },
+  thinkingCard: { borderRadius: 16, marginBottom: 24, flexDirection: "row", alignItems: "center", paddingVertical: 14 },
+  thinkingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#A78BFA", marginRight: 8, opacity: 0.8 },
+  thinkingSpinner: { marginRight: 8 },
+  thinkingText: { color: "#A78BFA" },
+  sectionHeading: { marginBottom: 16, color: "#0F172A" },
+  trendingContainer: { gap: 16, paddingRight: 24 },
+  trendingCardWrapper: { width: 180 },
+  trendingCard: { borderRadius: 20, overflow: "hidden", padding: 0 },
+  trendingImageWrapper: { height: 120, borderRadius: 16, overflow: "hidden", position: "relative" },
+  trendingImage: { width: "100%", height: "100%" },
+  trendingOverlay: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: "rgba(0,0,0,0.5)" },
+  trendingTitle: { color: "#FFF", fontWeight: "700", fontSize: 15 },
+  trendingScoreRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  trendingScore: { color: "rgba(255,255,255,0.9)", fontSize: 12, marginLeft: 4 },
+  guestContainer: { position: "absolute", bottom: 60, left: 0, right: 0, zIndex: 10, padding: 20, marginTop: 16 },
   guestContent: {
-    flexDirection: "column",
-    alignItems: "center",
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 1)",
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
-    gap: 10,
+    flexDirection: "column", alignItems: "center", padding: 20, borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,1)", borderWidth: 1, borderColor: "rgba(0,0,0,0.1)", gap: 10,
   },
-  guestText: {
-    color: "#0F172A",
-    fontWeight: "600",
+  guestText: { color: "#0F172A", fontWeight: "600" },
+  guestButton: { width: "100%", backgroundColor: "#2DD4BF" },
+  guestButtonText: { color: "#0F172A", fontWeight: "600" },
+
+  // ─── Error state ───
+  errorContainer: {
+    alignItems: "center", padding: 24, backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 16, marginBottom: 16, gap: 12,
   },
-  guestButton: {
-    width: "100%",
-    backgroundColor: "#2DD4BF",
+  errorText: { fontSize: 14, color: "#64748B", textAlign: "center" },
+  retryButton: {
+    paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, backgroundColor: "#2DD4BF",
   },
-  guestButtonText: {
-    color: "#0F172A",
-    fontWeight: "600",
+  retryButtonText: { color: "#FFF", fontWeight: "600", fontSize: 14 },
+
+  // ─── Structured Response ───
+
+  chatContainer: { paddingBottom: 20 },
+
+  responseTitle: {
+    fontSize: 28, fontWeight: "800", color: "#0F172A", marginBottom: 20, letterSpacing: -0.5,
   },
-  chatContainer: {
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+
+  // Section
+  section: { marginBottom: 24 },
+  sectionHeader: {
+    flexDirection: "row", alignItems: "center", marginBottom: 14, paddingBottom: 10,
+    borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.05)",
   },
-  chatHeadingText: {
-    marginBottom: 16,
-    color: "#0F172A" 
+  sectionEmojiCircle: {
+    width: 42, height: 42, borderRadius: 21, backgroundColor: "#F0EEFF",
+    alignItems: "center", justifyContent: "center", marginRight: 12,
   },
-  chatEndButton: {
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: "#2DD4BF",
-  },
-  chatEndButtonText: {
-    color: "#FFF"
-  },
-  stopsContainer: {
-    marginLeft: 12,
-  },
-  stopRow: {
-    flexDirection: "row",
-    marginBottom: 8,
-  },
-  timelineColumn: {
-    alignItems: "center",
-    width: 32,
-  },
-  timelineDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 3,
-    borderColor: "#F8FAFC",
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: "#A78BFA",
-    marginVertical: 4,
-    minHeight: 40,
-    opacity: 0.5,
-  },
-  stopContent: {
-    flex: 1,
-    marginLeft: 16,
-    paddingBottom: 24,
-  },
-  stopCard: {
-    borderRadius: 20,
+  sectionEmoji: { fontSize: 20 },
+  sectionHeaderText: { flex: 1 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  sectionTime: { fontSize: 13, color: "#A78BFA", fontWeight: "600", marginTop: 2 },
+
+  // Option card
+  optionCard: {
+    flexDirection: "row", alignItems: "flex-start", backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)",
     overflow: "hidden",
-    padding: 0,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
+      android: { elevation: 2 },
+      web: { boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+    }),
   },
-  stopCardContent: {
-    padding: 14,
+  optionTouchable: {
+    flex: 1, flexDirection: "row", alignItems: "flex-start", padding: 12,
   },
-  stopHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 4,
+  optionNumberBadge: {
+    width: 24, height: 24, borderRadius: 12, backgroundColor: "#2DD4BF",
+    alignItems: "center", justifyContent: "center", marginRight: 10, marginTop: 2,
   },
-  stopTime: {
-    fontFamily: "Montserrat_700Bold",
-    fontSize: 18,
-    color: "#0F172A",
+  optionNumberText: { color: "#FFF", fontSize: 12, fontWeight: "800" },
+  optionImage: {
+    width: 60, height: 60, borderRadius: 12, marginRight: 10,
   },
-  safeBadge: {
-    backgroundColor: "#10B981",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+  optionImagePlaceholder: {
+    backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center",
   },
-  safeBadgeText: {
-    color: "#FFF",
-    fontWeight: "700",
-    fontSize: 10,
+  optionBody: { flex: 1 },
+  optionTitleRow: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 3 },
+  optionTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A", flex: 1 },
+  optionWhy: { fontSize: 13, color: "#475569", lineHeight: 18, marginBottom: 6 },
+  optionMeta: { flexDirection: "row", flexWrap: "wrap", gap: 5 },
+  optionChip: {
+    flexDirection: "row", alignItems: "center", backgroundColor: "#F8FAFC",
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, gap: 3,
   },
-  stopTitle: {
-    fontWeight: "700",
-    fontSize: 16,
-    color: "#0F172A",
-    marginBottom: 4,
+  optionChipText: { fontSize: 11, fontWeight: "600", color: "#475569" },
+  optionBudgetText: { fontSize: 11, fontWeight: "700", color: "#10B981" },
+
+  // Replace button
+  replaceButton: {
+    padding: 10, alignSelf: "flex-start", marginTop: 4,
   },
-  stopDescription: {
-    color: "#64748B",
-    marginBottom: 10,
+
+  // ─── Buttons ───
+  showRouteButton: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#A78BFA", paddingVertical: 16, borderRadius: 16, marginTop: 8, gap: 10,
   },
-  stopImageWrapper: {
-    height: 100,
-    borderRadius: 12,
-    overflow: "hidden",
+  showRouteButtonText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  newSearchButton: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#2DD4BF", paddingVertical: 16, borderRadius: 16, marginTop: 8, gap: 8,
   },
-  stopImage: {
-    width: "100%",
-    height: "100%",
+  newSearchButtonText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  eventsButton: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#2DD4BF", paddingVertical: 16, borderRadius: 16, marginTop: 8, gap: 8,
   },
-  visibilityOverlay: {
-    position: "absolute",
-    bottom: 8,
-    left: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  iconSmall: {
-    marginRight: 4,
-  },
-  visibilityText: {
-    color: "#FFF",
-    fontSize: 11,
-  },
-  walkInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  walkText: {
-    color: "#64748B",
-  },
-  stopButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 15,
-  },
-  stopReplaceButton: {
-    flex: 1,
-    backgroundColor: "#2DD4BF"
-  },
-  stopReplaceButtonText: {
-    color: "#FFF"
-  },
-  stopRemoveButton: {
-    flex: 1,
-    backgroundColor: "rgba(255, 112, 112, 1)"
-  },
-  stopRemoveButtonText: {
-    color: "#FFF"
-  },
+  eventsButtonText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 });

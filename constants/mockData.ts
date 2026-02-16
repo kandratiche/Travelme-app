@@ -159,14 +159,36 @@ export const GUIDES: Guide[] = [
 ];
 
 export const PLACES: Place[] = [
-  { id: "place-1", name: "Bayterek Tower", imageUrl: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=600", safetyScore: 96, rating: 4.8, tags: ["Landmark", "Views", "Astana"] },
-  { id: "place-2", name: "Khan Shatyr", imageUrl: "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=600", safetyScore: 94, rating: 4.7, tags: ["Shopping", "Entertainment"] },
-  { id: "place-3", name: "Hazrat Sultan Mosque", imageUrl: "https://images.unsplash.com/photo-1567596434663-f8c2d2e1e8a8?w=600", safetyScore: 98, rating: 4.9, tags: ["Architecture", "Culture"] },
-  { id: "place-4", name: "Medeu Rink", imageUrl: "https://images.unsplash.com/photo-1547448415-e9f5b28e570d?w=600", safetyScore: 91, rating: 4.6, tags: ["Sports", "Nature", "Almaty"] },
-  { id: "place-5", name: "Green Bazaar", imageUrl: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=600", safetyScore: 85, rating: 4.5, tags: ["Food", "Local", "Markets"] },
-  { id: "place-6", name: "Kok Tobe", imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600", safetyScore: 92, rating: 4.8, tags: ["Views", "Cable Car", "Photo Spot"] },
-  { id: "place-7", name: "Caspian Beach", imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", safetyScore: 88, rating: 4.4, tags: ["Beach", "Aktau", "Nature"] },
-  { id: "place-8", name: "Sherkala Mountain", imageUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600", safetyScore: 82, rating: 4.9, tags: ["Adventure", "Desert", "Hiking"] },
+  // ── Astana ──
+  { id: "place-1", name: "Bayterek Tower", imageUrl: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=600", safetyScore: 96, rating: 4.8, tags: ["Landmark", "Views", "Astana"], description: "Iconic 97m observation tower — symbol of Astana with panoramic city views" },
+  { id: "place-2", name: "Khan Shatyr", imageUrl: "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=600", safetyScore: 94, rating: 4.7, tags: ["Shopping", "Entertainment", "Astana"], description: "Giant tent-shaped mall with shops, restaurants, and indoor beach" },
+  { id: "place-3", name: "Hazrat Sultan Mosque", imageUrl: "https://images.unsplash.com/photo-1567596434663-f8c2d2e1e8a8?w=600", safetyScore: 98, rating: 4.9, tags: ["Architecture", "Culture", "Astana"], description: "Largest mosque in Central Asia — stunning architecture and peaceful atmosphere" },
+  { id: "place-9", name: "Tselinny Coffee Roasters", imageUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600", safetyScore: 95, rating: 4.8, tags: ["Coffee", "Cafe", "Astana", "Cozy"], description: "Specialty coffee roastery with pour-over, V60 and fresh pastries" },
+  { id: "place-10", name: "Baristar Coffee", imageUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600", safetyScore: 93, rating: 4.6, tags: ["Coffee", "Cafe", "Astana", "Breakfast"], description: "Popular local chain with great lattes and avocado toasts" },
+  { id: "place-11", name: "Fusion Restaurant", imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600", safetyScore: 94, rating: 4.7, tags: ["Restaurant", "Dining", "Astana", "Date"], description: "Fine dining with Kazakh-European fusion cuisine and city views" },
+  { id: "place-12", name: "Astana Opera", imageUrl: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600", safetyScore: 97, rating: 4.9, tags: ["Culture", "Entertainment", "Astana", "Date"], description: "World-class opera and ballet in a stunning neoclassical building" },
+  { id: "place-13", name: "Nur-Astana Mosque", imageUrl: "https://images.unsplash.com/photo-1585036156171-384164a8c159?w=600", safetyScore: 97, rating: 4.8, tags: ["Architecture", "Culture", "Astana"], description: "Beautiful golden-domed mosque on the left bank of Ishim river" },
+  { id: "place-14", name: "EXPO Sphere", imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600", safetyScore: 93, rating: 4.5, tags: ["Landmark", "Culture", "Astana", "Museum"], description: "Futuristic sphere from EXPO-2017, now a museum of future energy" },
+  { id: "place-15", name: "Ishim River Embankment", imageUrl: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600", safetyScore: 92, rating: 4.6, tags: ["Nature", "Walk", "Astana", "Park", "Photo Spot"], description: "Scenic riverside walk with evening lights and bridge views" },
+
+  // ── Almaty ──
+  { id: "place-4", name: "Medeu Rink", imageUrl: "https://images.unsplash.com/photo-1547448415-e9f5b28e570d?w=600", safetyScore: 91, rating: 4.6, tags: ["Sports", "Nature", "Almaty"], description: "Highest outdoor ice rink in the world at 1,691m above sea level" },
+  { id: "place-5", name: "Green Bazaar", imageUrl: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=600", safetyScore: 85, rating: 4.5, tags: ["Food", "Local", "Markets", "Almaty"], description: "Vibrant central market — dried fruits, spices, fresh produce" },
+  { id: "place-6", name: "Kok Tobe", imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600", safetyScore: 92, rating: 4.8, tags: ["Views", "Cable Car", "Photo Spot", "Almaty", "Date"], description: "Mountain park with cable car, restaurants and panoramic city views" },
+  { id: "place-16", name: "Coffee Boom", imageUrl: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600", safetyScore: 94, rating: 4.7, tags: ["Coffee", "Cafe", "Almaty", "Cozy"], description: "Almaty's favorite specialty coffee with beans roasted in-house" },
+  { id: "place-17", name: "Panfilov Park", imageUrl: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600", safetyScore: 93, rating: 4.7, tags: ["Park", "Nature", "Almaty", "Walk", "Culture"], description: "Historic park with the wooden Zenkov Cathedral and war memorial" },
+  { id: "place-18", name: "Shymbulak Ski Resort", imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600", safetyScore: 90, rating: 4.8, tags: ["Sports", "Nature", "Almaty", "Adventure", "Views"], description: "Year-round mountain resort — skiing in winter, hiking in summer" },
+  { id: "place-19", name: "Kasteev Art Museum", imageUrl: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600", safetyScore: 96, rating: 4.6, tags: ["Culture", "Museum", "Almaty"], description: "Kazakhstan's largest art museum with Central Asian and European collections" },
+  { id: "place-20", name: "Dostyk Plaza Food Court", imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600", safetyScore: 92, rating: 4.3, tags: ["Food", "Shopping", "Almaty", "Budget"], description: "Modern mall with diverse food court — from Korean to Kazakh cuisine" },
+  { id: "place-21", name: "The Ritz Almaty", imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600", safetyScore: 95, rating: 4.8, tags: ["Restaurant", "Dining", "Almaty", "Date", "Luxury"], description: "Upscale restaurant with live music, steaks and cocktails" },
+  { id: "place-22", name: "First President's Park", imageUrl: "https://images.unsplash.com/photo-1510270029795-8ff3ad5d46c1?w=600", safetyScore: 94, rating: 4.5, tags: ["Park", "Nature", "Almaty", "Walk", "Family"], description: "Large green park perfect for walks, picnics and jogging" },
+
+  // ── Aktau ──
+  { id: "place-7", name: "Caspian Beach", imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", safetyScore: 88, rating: 4.4, tags: ["Beach", "Aktau", "Nature"], description: "Warm Caspian Sea coast — swimming, sunsets and fresh seafood nearby" },
+  { id: "place-8", name: "Sherkala Mountain", imageUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600", safetyScore: 82, rating: 4.9, tags: ["Adventure", "Desert", "Hiking", "Aktau"], description: "Otherworldly mountain shaped like a yurt in the Mangystau desert" },
+  { id: "place-23", name: "Bozzhyra Canyon", imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600", safetyScore: 80, rating: 4.9, tags: ["Adventure", "Nature", "Aktau", "Views", "Photo Spot"], description: "Martian landscape of white chalk cliffs — one of Kazakhstan's top wonders" },
+  { id: "place-24", name: "Aktau Embankment", imageUrl: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600", safetyScore: 91, rating: 4.5, tags: ["Walk", "Aktau", "Views", "Date"], description: "Sea-side promenade with cafes, sunset views over the Caspian" },
+  { id: "place-25", name: "Chez Nino Cafe", imageUrl: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600", safetyScore: 93, rating: 4.6, tags: ["Coffee", "Cafe", "Aktau", "Breakfast"], description: "Cozy seaside cafe with great coffee, brunch and pastries" },
 ];
 
 const ALMATY_TIMELINE_STOPS = [

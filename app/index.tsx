@@ -3,15 +3,15 @@ import { View, Text, TouchableOpacity, Linking, ScrollView, StyleSheet } from "r
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from 'react-i18next';
-import { LightScreen } from "../components/ui/LightScreen";
-import { GlassCardOnLight } from "../components/ui/GlassCard";
-import { BodyText, CaptionText } from "../components/ui/ThemedText";
+import { LightScreen } from "@/components/ui/LightScreen";
+import { GlassCardOnLight } from "@/components/ui/GlassCard";
+import { BodyText, CaptionText } from "@/components/ui/ThemedText";
 import { SplitTitle } from "@/components/ui/SplitTitle";
 import { AuthContext } from "@/context/authContext";
 
 export default function WelcomeScreen() {
   const { user } = useContext(AuthContext);
-  const { t } = useTranslation(); // Добавьте
+  const { t } = useTranslation();
   
   useEffect(() => { 
       if (user) {

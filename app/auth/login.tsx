@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { View, Text, TextInput, TouchableOpacity, Platform, Alert, StyleSheet } from "react-native";
 import { SplitTitle } from "@/components/ui/SplitTitle";
 import { GlassCardOnLight } from "@/components/ui/GlassCard";
-import supabase from "@/lib/supabaseClient";
+import { loginUserApi } from "../api/authApi";
 import { AuthContext } from "@/context/authContext";
 import { CaptionText } from "@/components/ui/ThemedText";
 import { useTranslation } from "react-i18next";
@@ -19,8 +19,7 @@ export default function UserLogin() {
     const [loading, setLoading] = React.useState<boolean>(false);
     const [isError, setIsError] = React.useState<boolean>(false);
     const [errorMessage, setErrorMessage] = React.useState<string>("");
-
-    const { user } = useContext(AuthContext);
+    const { user, setUser } = useContext(AuthContext);
     
     useEffect(() => {
         if (user) {
@@ -29,43 +28,19 @@ export default function UserLogin() {
     }, [user]);
 
     const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert(t('userLogin.loginButton'), t('userLogin.fillAllFields'));
-            return;
-        }
-
         setLoading(true);
+        const data = await loginUserApi({ email, password });
+        setLoading(false);
 
-        try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+        if (!data?.user) return;
 
-            if (error) {
-                setIsError(true);
-                setErrorMessage(error.message);
-                return;
-            }
+        console.log("Logged in:", data.user.email);
+        setUser(data);
 
-            if (data?.user) {
-                console.log("Logged in:", data.user.email);
-
-                if (Platform.OS === "web") {
-                    alert(t('userLogin.loginSuccess'));
-                    router.replace("/city-select");
-                } else {
-                    Alert.alert(t('userLogin.loginButton'), t('userLogin.loginSuccess'), [
-                        { text: "OK", onPress: () => router.replace("/city-select") },
-                    ]);
-                }
-            }
-        } catch (err) {
-            console.error(err);
-            Alert.alert(t('userLogin.loginButton'), t('userLogin.somethingWrong'));
-        } finally {
-            setLoading(false);
-        }
+        router.replace({
+            pathname: "auth/city-select",
+            params: { new: "true" },
+        });
     };
 
     return (

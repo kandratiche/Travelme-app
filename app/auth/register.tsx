@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { View, Text, TextInput, TouchableOpacity, Platform, Alert, StyleSheet } from "react-native";
 import { SplitTitle } from "@/components/ui/SplitTitle";
 import { GlassCardOnLight } from "@/components/ui/GlassCard";
-import supabase from "@/lib/supabaseClient";
+import { registerUserApi } from "../api/authApi";
 import { AuthContext } from "@/context/authContext";
 import { useTranslation } from "react-i18next";
 
@@ -29,64 +29,19 @@ export default function UserRegister() {
   }, [user]);
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword || !name) {
-      Alert.alert(t("userRegister.register"), t("userRegister.fillAllFields"));
-      return;
-    }
+  setLoading(true);
+  const data = await registerUserApi({ email, password, confirmPassword, name });
+  setLoading(false);
 
-    if (password !== confirmPassword) {
-      Alert.alert(t("userRegister.register"), t("userRegister.passwordsDoNotMatch"));
-      return;
-    }
+  if (!data) return;
 
-    if (password.length < 6) {
-      Alert.alert(t("userRegister.register"), t("userRegister.passwordMinLength"));
-      return;
-    }
+  setUser(data.auth);
 
-    setLoading(true);
-
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) {
-        Alert.alert(t("userRegister.registrationFailed"), authError.message);
-        return;
-      }
-
-      const userId = authData.user?.id;
-      if (!userId) throw new Error(t("userRegister.userIdNotReturned"));
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("users")
-        .update({ name: name, languages: "en" })
-        .eq("id", userId)
-        .select()
-        .single();
-
-      if (profileError) {
-        Alert.alert(t("userRegister.register"), profileError.message);
-        return;
-      }
-
-      console.log("User registered:", profileData);
-      setUser(profileData);
-
-      router.replace({
-        pathname: "/auth/city-select",
-        params: { new: "true" },
-      });
-
-    } catch (err: any) {
-      console.error("Unexpected error:", err);
-      Alert.alert(t("userRegister.register"), err.message || t("userRegister.somethingWrong"));
-    } finally {
-      setLoading(false);
-    }
-  };
+  router.replace({
+    pathname: "/auth/city-select",
+    params: { new: "true" },
+  });
+};
 
   return (
     <LightScreen>
@@ -189,7 +144,7 @@ export default function UserRegister() {
           <View style={styles.fieldContainer}>
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleRegister}
+              onPress={() => handleRegister()}
               disabled={loading}
             >
               <Text style={styles.buttonText}>

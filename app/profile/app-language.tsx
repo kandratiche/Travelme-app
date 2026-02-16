@@ -4,8 +4,8 @@ import { TouchableOpacity, View, StyleSheet, Alert, Platform } from "react-nativ
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from 'react-i18next';
-import { changeLanguage } from "../i18n";
 import { SplitTitle } from "@/components/ui/SplitTitle";
+import { changeLanguage } from "@/app/i18n";
 import { GlassCardOnLight } from "@/components/ui/GlassCard";
 import { BodyText } from "@/components/ui/ThemedText";
 import { AuthContext } from "@/context/authContext";

@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LightScreen } from "../../components/ui/LightScreen";
 import { GlassCardOnLight } from "../../components/ui/GlassCard";
 import { BodyText, CaptionText } from "../../components/ui/ThemedText";
-import { GUIDES } from "../../constants/mockData";
+import { GUIDES } from "@/constants/mockData";
 
 export default function GuideProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

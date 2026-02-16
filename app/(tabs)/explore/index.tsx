@@ -10,10 +10,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { LightScreen } from "../../../components/ui/LightScreen";
-import { GlassCardOnLight } from "../../../components/ui/GlassCard";
-import { SplitTitle } from "../../../components/ui/SplitTitle";
-import { BodyText, CaptionText } from "../../../components/ui/ThemedText";
+import { LightScreen } from "@/components/ui/LightScreen";
+import { GlassCardOnLight } from "@/components/ui/GlassCard";
+import { SplitTitle } from "@/components/ui/SplitTitle";
+import { BodyText, CaptionText } from "@/components/ui/ThemedText";
 import { GUIDES, PLACES } from "../../../constants/mockData";
 import { AuthContext } from "@/context/authContext";
 import { Button } from "react-native-paper";

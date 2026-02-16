@@ -34,29 +34,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      const sessionUser = data.session?.user ?? null;
-      if (sessionUser) {
-        const profile = await fetchUserProfile(sessionUser.id);
-        setUser(profile);
+      try {
+        const { data } = await supabase.auth.getSession();
+        const sessionUser = data.session?.user ?? null;
+        if (sessionUser) {
+          const profile = await fetchUserProfile(sessionUser.id);
+          setUser(profile);
+        }
+      } catch (err) {
+        console.warn('Failed to get session (Supabase may not be configured):', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          setUser(profile);
-        } else {
-          setUser(null);
+    let listener: { subscription: { unsubscribe: () => void } } | null = null;
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          if (session?.user) {
+            const profile = await fetchUserProfile(session.user.id);
+            setUser(profile);
+          } else {
+            setUser(null);
+          }
         }
-      }
-    );
+      );
+      listener = data;
+    } catch (err) {
+      console.warn('Failed to subscribe to auth changes:', err);
+    }
 
-    return () => listener.subscription.unsubscribe();
+    return () => listener?.subscription.unsubscribe();
   }, []);
 
   return (

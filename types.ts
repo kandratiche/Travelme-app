@@ -63,12 +63,45 @@ export interface TimelineStop {
   safetyLevel: SafetyLevel;
   safetyScore: number;
   tags: string[];
+  description?: string;
   instaWorthy?: boolean;
   walkingTime?: string;
   walkingTerrain?: string;
   aiNote?: string;
   visibility?: string;
   crowdLevel?: string;
+  // Detail fields
+  type?: string;
+  rating?: number | null;
+  address?: string | null;
+  priceLevel?: number;          // 0=free → 5=luxury
+  openingHours?: string | null;
+  contact?: string | null;
+  reviewCount?: number;
+  verified?: boolean;
+  distanceKm?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export interface SectionOption {
+  place: TimelineStop;
+  why: string;                         // AI-generated contextual description
+  budgetHint?: string;                 // e.g., "10–15k KZT"
+}
+
+export interface StructuredSection {
+  title: string;                       // "Ужин", "После ужина"
+  emoji: string;                       // "🍽", "🌆"
+  timeRange: string;                   // "18:30–20:00"
+  options: SectionOption[];            // 2-3 shown options
+  reserves: SectionOption[];           // 1-2 hidden backups for Replace
+}
+
+export interface AIResponse {
+  title: string;
+  sections: StructuredSection[];
+  scoredPool: string[];                // Remaining place IDs for Replace fallback
 }
 
 export interface Itinerary {

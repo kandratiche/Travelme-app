@@ -10,9 +10,9 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { LightScreen } from "../../../components/ui/LightScreen";
-import { GlassCardOnLight } from "../../../components/ui/GlassCard";
-import { BodyText, CaptionText } from "../../../components/ui/ThemedText";
+import { LightScreen } from "@/components/ui/LightScreen";
+import { GlassCardOnLight } from "@/components/ui/GlassCard";
+import { BodyText, CaptionText } from "@/components/ui/ThemedText";
 import { AuthContext } from "@/context/authContext";
 import supabase from "@/lib/supabaseClient";
 import { Button } from "react-native-paper";
