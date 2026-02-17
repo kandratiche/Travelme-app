@@ -112,7 +112,9 @@
     "nextAdventure": "NEXT ADVENTURE",
     "inDays": "IN {{days}} DAYS",
     "guestMessage": "You are not logged in. Please log in to access your profile.",
-    "logIn": "Log In"
+    "logIn": "Log In",
+    "explore": "Explore",
+    "myTrips": "My Trips"
   },
   "profile": {
     "myTrips": "My Trips",

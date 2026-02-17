@@ -4,17 +4,13 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
-  Platform,
   Text
 } from "react-native";
 import { router } from "expo-router";
 import { useTranslation } from 'react-i18next';
 import { LightScreen } from "@/components/ui/LightScreen";
 import { GlassCardOnLight } from "@/components/ui/GlassCard";
-import { BodyText } from "@/components/ui/ThemedText";
 import { AuthContext } from "@/context/authContext";
-import supabase from "@/lib/supabaseClient";
 import { Ionicons } from "@expo/vector-icons";
 import { SplitTitle } from "@/components/ui/SplitTitle";
 

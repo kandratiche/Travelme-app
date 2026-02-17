@@ -3,18 +3,18 @@ import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet } from "rea
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LightScreen } from "@/components/ui/LightScreen";
-import { GlassCardOnLight } from "@/components/ui/GlassCard";
 import { SplitTitle } from "@/components/ui/SplitTitle";
 import { BodyText, CaptionText } from "@/components/ui/ThemedText";
-import { SAVED_TRIPS } from "../../../constants/mockData";
 import { AuthContext } from "@/context/authContext";
 import { Button } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { ExploreTab } from "@/app/trips/ExploreTab";
+import { MyTripsTab } from "@/app/trips/MyTripsTab";
 
 export default function TripsScreen() {
   const { t } = useTranslation();
   const { user, loading } = React.useContext(AuthContext);
-  const [activeTab, setActiveTab] = React.useState<'upcoming' | 'past' | 'saved'>('upcoming');
+  const [activeTab, setActiveTab] = React.useState<'explore' | 'my trips'>('explore');
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   React.useEffect(() => {
@@ -23,99 +23,13 @@ export default function TripsScreen() {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "upcoming": 
+      case "explore": 
         return (
-          SAVED_TRIPS.length === 0 ? (
-            <GlassCardOnLight style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={48} color="#94A3B8" style={styles.emptyIcon} />
-              <BodyText style={styles.emptyTitle}>{t("trips.noSavedTrips")}</BodyText>
-              <CaptionText style={styles.emptySubtitle}>{t("trips.createFromHome")}</CaptionText>
-              <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.goHomeButton}>
-                <Text style={styles.goHomeText}>{t("trips.goHome")}</Text>
-              </TouchableOpacity>
-            </GlassCardOnLight>
-          ) : (
-            <>
-              <View style={styles.nextAdventureRow}>
-                <CaptionText style={styles.nextAdventureText}>{t("trips.nextAdventure")}</CaptionText>
-                <Text style={styles.nextAdventureDate}>{t("trips.inDays", { days: 2 })}</Text>
-              </View>
-
-              {SAVED_TRIPS.map((trip, idx) => (
-                <TouchableOpacity
-                  key={trip.id}
-                  onPress={() => router.push("/timeline")}
-                  activeOpacity={0.9}
-                  style={styles.cardWrapper}
-                >
-                  <GlassCardOnLight style={styles.tripCard}>
-                    <View style={styles.tripCardContent}>
-                      <Image source={{ uri: trip.previewImageUrl }} style={styles.tripImage} resizeMode="cover" />
-                      <View style={styles.bookedBadge}>
-                        <View style={styles.bookedIndicator} />
-                        <Text style={styles.bookedText}>BOOKED</Text>
-                      </View>
-                      <View style={styles.tripOverlay}>
-                        <View style={styles.tripDateRow}>
-                          <Ionicons name="calendar-outline" size={14} color="#FFF" style={styles.calendarIcon} />
-                          <CaptionText style={styles.tripDateText}>Feb 6, 19:00</CaptionText>
-                        </View>
-                        <Text style={styles.tripTitle}>{idx === 0 ? "DATE NIGHT" : trip.title}</Text>
-                        <Text style={styles.tripCity}>{trip.cityName}</Text>
-                        <TouchableOpacity style={styles.forwardButton}>
-                          <Ionicons name="arrow-forward" size={22} color="#0F172A" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </GlassCardOnLight>
-                </TouchableOpacity>
-              ))}
-            </>
-          )
+          <ExploreTab/>
         )
-      case "past": 
+      case "my trips": 
         return (
-          user.trips_completed === 0 ? (
-            <GlassCardOnLight style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={48} color="#94A3B8" style={styles.emptyIcon} />
-              <BodyText style={styles.emptyTitle}>{t("trips.noPastTrips")}</BodyText>
-              <CaptionText style={styles.emptySubtitle}>{t("trips.createFromHome")}</CaptionText>
-              <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.goHomeButton}>
-                <Text style={styles.goHomeText}>{t("trips.goHome")}</Text>
-              </TouchableOpacity>
-            </GlassCardOnLight>
-          ) : (
-            <GlassCardOnLight style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={48} color="#94A3B8" style={styles.emptyIcon} />
-              <BodyText style={styles.emptyTitle}>{t("trips.noPastTrips")}</BodyText>
-              <CaptionText style={styles.emptySubtitle}>{t("trips.createFromHome")}</CaptionText>
-              <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.goHomeButton}>
-                <Text style={styles.goHomeText}>{t("trips.goHome")}</Text>
-              </TouchableOpacity>
-            </GlassCardOnLight>
-          )
-        )
-      case "saved":
-        return (
-          user.trips_completed === 0 ? (
-            <GlassCardOnLight style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={48} color="#94A3B8" style={styles.emptyIcon} />
-              <BodyText style={styles.emptyTitle}>{t("trips.noSavedTrips")}</BodyText>
-              <CaptionText style={styles.emptySubtitle}>{t("trips.createFromHome")}</CaptionText>
-              <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.goHomeButton}>
-                <Text style={styles.goHomeText}>{t("trips.goHome")}</Text>
-              </TouchableOpacity>
-            </GlassCardOnLight>
-          ) : (
-            <GlassCardOnLight style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={48} color="#94A3B8" style={styles.emptyIcon} />
-              <BodyText style={styles.emptyTitle}>{t("trips.noSavedTrips")}</BodyText>
-              <CaptionText style={styles.emptySubtitle}>{t("trips.createFromHome")}</CaptionText>
-              <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.goHomeButton}>
-                <Text style={styles.goHomeText}>{t("trips.goHome")}</Text>
-              </TouchableOpacity>
-            </GlassCardOnLight>
-          )
+          <MyTripsTab/>
         )
     }
   }
@@ -153,29 +67,20 @@ export default function TripsScreen() {
         </View>
         <View style={styles.tabRow}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'upcoming' && styles.activeTab]}
-            onPress={() => setActiveTab('upcoming')}
+            style={[styles.tabButton, activeTab === 'explore' && styles.activeTab]}
+            onPress={() => setActiveTab('explore')}
           >
-            <Text style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}>
-              {t("trips.upcoming")}
+            <Text style={[styles.tabText, activeTab === 'explore' && styles.activeTabText]}>
+              {t("trips.explore")}
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'past' && styles.activeTab]}
-            onPress={() => setActiveTab('past')}
+            style={[styles.tabButton, activeTab === 'my trips' && styles.activeTab]}
+            onPress={() => setActiveTab('my trips')}
           >
-            <Text style={[styles.tabText, activeTab === 'past' && styles.activeTabText]}>
-              {t("trips.past")}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'saved' && styles.activeTab]}
-            onPress={() => setActiveTab('saved')}
-          >
-            <Text style={[styles.tabText, activeTab === 'saved' && styles.activeTabText]}>
-              {t("trips.saved")}
+            <Text style={[styles.tabText, activeTab === 'my trips' && styles.activeTabText]}>
+              {t("trips.myTrips")}
             </Text>
           </TouchableOpacity>
         </View>
