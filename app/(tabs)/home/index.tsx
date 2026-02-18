@@ -22,21 +22,22 @@ import { AuthContext } from "@/context/authContext";
 import { Button } from "react-native-paper";
 import i18n from "@/app/i18n";
 import { useTranslation } from "react-i18next";
-import { generateAIResponse, replaceOption, getCachedPlaces } from "@/lib/openai";
+import { generateAIResponse, replaceOption, getCachedPlaces } from "@/lib/ai";
 import { getUserLocation, formatDistance, type UserLocation } from "@/lib/location";
 import PlaceDetailModal from "@/components/PlaceDetailModal";
 import RouteMapModal from "@/components/RouteMapModal";
 import type { TimelineStop, AIResponse, StructuredSection, SectionOption } from "@/types";
+import { useSaveTrip } from "@/hooks/useTrips";
 
 const QUICK_ACTIONS = [
-  { id: "coffee", icon: "cafe", prompt: "хочу кофе", label: "Кофе" },
-  { id: "food", icon: "restaurant", prompt: "хочу поесть", label: "Еда" },
-  { id: "views", icon: "eye", prompt: "красивые виды", label: "Виды" },
-  { id: "culture", icon: "book", prompt: "культурный тур по городу", label: "Культура" },
-  { id: "nature", icon: "leaf", prompt: "прогулка на природе", label: "Природа" },
-  { id: "evening", icon: "moon", prompt: "план на вечер, поужинать и куда-нибудь сходить", label: "Вечер" },
-  { id: "business", icon: "briefcase", prompt: "свободен вечером в командировке, поужинать спокойно", label: "Бизнес" },
-  { id: "budget", icon: "wallet", prompt: "что-то классное и недорогое", label: "Бюджет" },
+  { id: "coffee", icon: "cafe", prompt: "хочу кофе", labelKey: "home.quickActionCoffee" },
+  { id: "food", icon: "restaurant", prompt: "хочу поесть", labelKey: "home.quickActionFood" },
+  { id: "views", icon: "eye", prompt: "красивые виды", labelKey: "home.quickActionViews" },
+  { id: "culture", icon: "book", prompt: "культурный тур по городу", labelKey: "home.quickActionCulture" },
+  { id: "nature", icon: "leaf", prompt: "прогулка на природе", labelKey: "home.quickActionNature" },
+  { id: "evening", icon: "moon", prompt: "план на вечер, поужинать и куда-нибудь сходить", labelKey: "home.quickActionEvening" },
+  { id: "business", icon: "briefcase", prompt: "свободен вечером в командировке, поужинать спокойно", labelKey: "home.quickActionBusiness" },
+  { id: "budget", icon: "wallet", prompt: "что-то классное и недорогое", labelKey: "home.quickActionBudget" },
 ];
 
 export default function HomeScreen() {
@@ -52,6 +53,7 @@ export default function HomeScreen() {
   const [routeMapVisible, setRouteMapVisible] = useState(false);
   const { user, loading } = useContext(AuthContext);
   const scrollRef = useRef<ScrollView>(null);
+  const saveTripMutation = useSaveTrip();
 
   const openDetail = (stop: TimelineStop) => {
     setSelectedStop(stop);
@@ -83,9 +85,9 @@ export default function HomeScreen() {
       const msg = err?.message || "Something went wrong";
       setErrorMsg(msg);
       if (Platform.OS === "web") {
-        alert("AI Error: " + msg);
+        alert(t("home.aiError") + ": " + msg);
       } else {
-        Alert.alert("AI Error", msg);
+        Alert.alert(t("home.aiError"), msg);
       }
     } finally {
       setIsThinking(false);
@@ -137,9 +139,9 @@ export default function HomeScreen() {
     }
   };
 
-  const handleEvents = async () => {
-    console.log("Doing nothing yet...");
-  }
+  const handleEvents = () => {
+    router.push("/explore");
+  };
 
 
   const renderStructuredResponse = (resp: AIResponse) => (
@@ -241,11 +243,62 @@ export default function HomeScreen() {
         activeOpacity={0.85}
       >
         <Ionicons name="map" size={20} color="#FFF" />
-        <Text style={styles.showRouteButtonText}>Показать маршрут</Text>
+        <Text style={styles.showRouteButtonText}>{t("home.showRoute")}</Text>
       </TouchableOpacity>
 
+      {user?.id && (
+        <TouchableOpacity
+          style={styles.saveButton}
+          activeOpacity={0.85}
+          onPress={() => {
+            const allStops = resp.sections.flatMap((s) => s.options.map((o) => o.place));
+            saveTripMutation.mutate({
+              userId: user.id,
+              title: resp.title,
+              city: user.home_city || "Almaty",
+              routeJson: resp,
+              previewImageUrl: allStops[0]?.imageUrl || "",
+              totalSafetyScore: Math.round(allStops.reduce((s, p) => s + p.safetyScore, 0) / (allStops.length || 1)),
+            });
+          }}
+        >
+          <Ionicons
+            name={saveTripMutation.isSuccess ? "checkmark-circle" : "bookmark-outline"}
+            size={20}
+            color={saveTripMutation.isSuccess ? "#10B981" : "#FFF"}
+          />
+          <Text style={styles.saveButtonText}>
+            {saveTripMutation.isPending ? t("home.saveRouteSaving") : saveTripMutation.isSuccess ? t("home.saveRouteSaved") : t("home.saveRoute")}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {user?.roles === "guide" && (
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: "rgba(255,191,0,0.15)", borderColor: "rgba(255,191,0,0.3)", borderWidth: 1 }]}
+          activeOpacity={0.85}
+          onPress={() => {
+            const allStops = resp.sections.flatMap((s) => s.options.map((o) => o.place));
+            const descParts = resp.sections.map((s) => `${s.emoji} ${s.title}: ${s.options.map((o) => o.place.title).join(", ")}`);
+            const tags = resp.sections.flatMap((s) => s.options.map((o) => o.place.title.split(/\s+/)[0].toLowerCase())).slice(0, 5);
+            router.push({
+              pathname: "/create-tour",
+              params: {
+                prefillTitle: resp.title,
+                prefillDescription: descParts.join("\n"),
+                prefillCity: user.home_city || "Almaty",
+                prefillTags: JSON.stringify(tags),
+              },
+            });
+          }}
+        >
+          <Ionicons name="megaphone-outline" size={20} color="#FFBF00" />
+          <Text style={[styles.saveButtonText, { color: "#FFBF00" }]}>{t("home.publishAsTour")}</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity style={styles.newSearchButton} onPress={handleEndChat} activeOpacity={0.85}>
-        <Text style={styles.newSearchButtonText}>Новый поиск</Text>
+        <Text style={styles.newSearchButtonText}>{t("home.newSearch")}</Text>
         <Ionicons name="arrow-forward" size={18} color="#FFF" />
       </TouchableOpacity>
     </View>
@@ -300,7 +353,7 @@ export default function HomeScreen() {
               <Ionicons name="warning-outline" size={32} color="#F59E0B" />
               <Text style={styles.errorText}>{errorMsg}</Text>
               <TouchableOpacity style={styles.retryButton} onPress={() => input.trim() && callAI(input.trim())} activeOpacity={0.8}>
-                <Text style={styles.retryButtonText}>Попробовать снова</Text>
+                <Text style={styles.retryButtonText}>{t("home.retry")}</Text>
               </TouchableOpacity>
             </View>
           ) : isChatting && aiResponse ? (
@@ -313,7 +366,7 @@ export default function HomeScreen() {
                   <TouchableOpacity key={action.id} onPress={() => handleQuickAction(action.prompt)} activeOpacity={0.8}>
                     <View style={styles.quickActionButton}>
                       <Ionicons name={action.icon as any} size={18} color="#2DD4BF" style={styles.quickActionIcon} />
-                      <Text style={styles.quickActionLabel}>{action.label}</Text>
+                      <Text style={styles.quickActionLabel}>{t(action.labelKey)}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -338,7 +391,7 @@ export default function HomeScreen() {
                 ))}
               </ScrollView>
               <TouchableOpacity style={styles.eventsButton} onPress={handleEvents} activeOpacity={0.85}>
-                <Text style={styles.eventsButtonText}>События в {user?.home_city}</Text>
+                <Text style={styles.eventsButtonText}>{t("home.events", { city: user?.home_city || t("home.unknownCity") })}</Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFF" />
               </TouchableOpacity>
             </View>
@@ -512,6 +565,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#A78BFA", paddingVertical: 16, borderRadius: 16, marginTop: 8, gap: 10,
   },
   showRouteButtonText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  saveButton: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#0F172A", paddingVertical: 16, borderRadius: 16, marginTop: 8, gap: 8,
+  },
+  saveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
   newSearchButton: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     backgroundColor: "#2DD4BF", paddingVertical: 16, borderRadius: 16, marginTop: 8, gap: 8,

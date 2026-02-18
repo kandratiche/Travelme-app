@@ -1,5 +1,6 @@
 import { fetchAllPlaces, filterByCity, type DBPlace } from "./places";
 import { haversineKm, formatDistance, estimateWalkingTime, type UserLocation } from "./location";
+import { getRoute, formatDuration, formatKm } from "./routing";
 import type { TimelineStop, AIResponse, SectionOption, StructuredSection, Itinerary } from "../types";
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
@@ -204,7 +205,44 @@ export async function generateAIResponse(options: GenerateOptions): Promise<AIRe
 
   console.log(`[AI] Title: "${title}", Sections: ${sections.length}, Pool: ${scoredPool.length}`);
 
-  return { title, sections, scoredPool };
+  const response: AIResponse = { title, sections, scoredPool };
+  // Fire-and-forget: don't block AI response on OSRM network call
+  enrichWalkingTimes(response).catch(() => {});
+  return response;
+}
+
+/**
+ * Enrich all stops in sections with real walking times from OSRM.
+ * Collects all stops in order, calls OSRM once, distributes segment data.
+ */
+async function enrichWalkingTimes(response: AIResponse): Promise<void> {
+  const allStops: TimelineStop[] = [];
+  for (const section of response.sections) {
+    for (const opt of section.options) {
+      if (opt.place.latitude && opt.place.longitude) {
+        allStops.push(opt.place);
+      }
+    }
+  }
+  if (allStops.length < 2) return;
+
+  try {
+    const waypoints = allStops.map((s) => ({ latitude: s.latitude!, longitude: s.longitude! }));
+    const route = await getRoute(waypoints, "foot");
+    if (!route?.segments) return;
+
+    for (let i = 0; i < route.segments.length; i++) {
+      const seg = route.segments[i];
+      const nextStop = allStops[i + 1];
+      if (nextStop) {
+        nextStop.walkingTime = `${formatDuration(seg.durationMinutes)} · ${formatKm(seg.distanceKm)}`;
+        nextStop.distanceKm = seg.distanceKm;
+      }
+    }
+    console.log(`[AI] Enriched ${route.segments.length} walking segments via OSRM`);
+  } catch (err) {
+    console.warn("[AI] OSRM enrichment failed, using estimates:", err);
+  }
 }
 
 // ─── Replace option (pure, instant, no API call) ───
@@ -323,17 +361,15 @@ Rules:
 - If query mentions "бюджет"/"студент" → pick affordable options
 - Respond in Russian for Russian queries, English for English queries`;
 
-  // Try models in order (2.5-flash-lite is free & available)
-  const models = ["gemini-2.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.0-flash"];
+  const models = ["gemini-2.0-flash-lite", "gemini-2.0-flash"];
   let lastError: Error | null = null;
 
   for (const model of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
     try {
-      // Abort after 15 seconds
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
       console.log(`[Gemini] Calling ${model}...`);
       const response = await fetch(url, {

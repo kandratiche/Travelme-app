@@ -1,14 +1,39 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "@/context/authContext";
 import { router } from "expo-router";
+import { useMyBookings, useMyGuideTours } from "@/hooks/useTours";
+
+function BadgeIcon({ name, color, size, badge }: { name: any; color: string; size: number; badge: number }) {
+  return (
+    <View>
+      <Ionicons name={name} size={size} color={color} />
+      {badge > 0 && (
+        <View style={badgeStyles.badge}>
+          <Text style={badgeStyles.badgeText}>{badge > 9 ? "9+" : badge}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const badgeStyles = StyleSheet.create({
+  badge: {
+    position: "absolute", top: -4, right: -8, minWidth: 16, height: 16,
+    borderRadius: 8, backgroundColor: "#FFBF00", alignItems: "center",
+    justifyContent: "center", paddingHorizontal: 3,
+  },
+  badgeText: { color: "#0F172A", fontSize: 9, fontWeight: "800" },
+});
 
 export default function TabsLayout() {
   const { user, loading } = useContext(AuthContext);
+  const { data: bookings = [] } = useMyBookings(user?.id || null);
+  const pendingBookings = bookings.filter(b => b.status === "pending").length;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,7 +84,9 @@ export default function TabsLayout() {
         name="trips/index"
         options={{
           title: "Trips",
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <BadgeIcon name="calendar" color={color} size={size} badge={pendingBookings} />
+          ),
         }}
       />
       <Tabs.Screen

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
@@ -11,8 +12,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Use placeholder values so the app can at least render.
-// Auth calls will fail gracefully until real credentials are provided.
 const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-anon-key',
@@ -22,6 +21,9 @@ const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      ...(Platform.OS === 'web' ? {
+        lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => await fn(),
+      } : {}),
     },
   }
 );
