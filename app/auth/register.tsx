@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { View, Text, TextInput, TouchableOpacity, Platform, Alert, StyleSheet, KeyboardAvoidingView } from "react-native";
 import { SplitTitle } from "@/components/ui/SplitTitle";
 import { GlassCardOnLight } from "@/components/ui/GlassCard";
-import { registerUserApi } from "../api/authApi";
+import { registerUserApi } from "@/services/authApi";
 import { AuthContext } from "@/context/authContext";
 import { useTranslation } from "react-i18next";
 

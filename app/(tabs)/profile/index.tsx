@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  Image,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +19,8 @@ import { AuthContext } from "@/context/authContext";
 import supabase from "@/lib/supabaseClient";
 import { Button } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { Crown, Plus, ShieldCheck } from "lucide-react-native";
+import { useMyGuideTours } from "@/hooks/useTours";
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -59,10 +63,23 @@ export default function ProfileScreen() {
     }
   };
 
+  const isGuide = user?.roles === "guide";
+  const { data: myTours = [] } = useMyGuideTours(isGuide ? user?.id : null);
+
   const handleEditProfile = () => router.push("/profile/edit-profile");
   const handleEditInterest = () => router.push("/profile/edit-interest");
   const handleChangeLanguage = () => router.push("/profile/app-language");
   const handleMyTrips = () => router.push("/profile/my-trips");
+  const handleSos = () => {
+    Alert.alert(
+      t("profile.sosSettings"),
+      "112 — Emergency\n102 — Police\n103 — Ambulance\n101 — Fire",
+      [
+        { text: "Call 112", onPress: () => Linking.openURL("tel:112"), style: "destructive" },
+        { text: t("tour.cancel"), style: "cancel" },
+      ],
+    );
+  };
 
   const SETTINGS_ITEMS = [
     { id: "trips", label: t("profile.myTrips"), sublabel: t("profile.viewTravelHistory"), icon: "airplane-outline" },
@@ -77,7 +94,11 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.profileContainer}>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={44} color="#2DD4BF" />
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={{ width: 80, height: 80, borderRadius: 40 }} />
+            ) : (
+              <Ionicons name="person" size={44} color="#2DD4BF" />
+            )}
           </View>
           <View style={styles.nameRow}>
             <Text style={styles.firstName}>{user?.name || "Guest"}</Text>
@@ -93,9 +114,94 @@ export default function ProfileScreen() {
                 <Text style={styles.statNumber}>{user.trips_completed}</Text>
               </View>
             </GlassCardOnLight>
+            <GlassCardOnLight style={styles.statCard}>
+              <View style={styles.statContent}>
+                <CaptionText style={styles.statCaption}>TOURS JOINED</CaptionText>
+                <Text style={styles.statNumber}>{user.tours_joined ?? 0}</Text>
+              </View>
+            </GlassCardOnLight>
+            <GlassCardOnLight style={styles.statCard}>
+              <View style={styles.statContent}>
+                <CaptionText style={styles.statCaption}>POINTS</CaptionText>
+                <Text style={[styles.statNumber, { color: "#FFBF00" }]}>{user.total_points ?? 0}</Text>
+              </View>
+            </GlassCardOnLight>
           </View>
+
+          {(user.total_points ?? 0) > 0 && (
+            <View style={styles.achievementsRow}>
+              {(user.tours_joined ?? 0) >= 1 && (
+                <View style={styles.achievementBadge}>
+                  <Text style={styles.achievementIcon}>🎒</Text>
+                  <Text style={styles.achievementLabel}>Explorer</Text>
+                </View>
+              )}
+              {(user.reviews_written ?? 0) >= 1 && (
+                <View style={styles.achievementBadge}>
+                  <Text style={styles.achievementIcon}>✍️</Text>
+                  <Text style={styles.achievementLabel}>Reviewer</Text>
+                </View>
+              )}
+              {(user.total_points ?? 0) >= 100 && (
+                <View style={[styles.achievementBadge, { borderColor: "#FFD700" }]}>
+                  <Text style={styles.achievementIcon}>⭐</Text>
+                  <Text style={[styles.achievementLabel, { color: "#FFD700" }]}>Star Nomad</Text>
+                </View>
+              )}
+              {(user.tours_joined ?? 0) >= 5 && (
+                <View style={[styles.achievementBadge, { borderColor: "#7C3AED" }]}>
+                  <Text style={styles.achievementIcon}>🏆</Text>
+                  <Text style={[styles.achievementLabel, { color: "#7C3AED" }]}>Veteran</Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
+
+        {isGuide ? (
+          <View style={styles.guideSection}>
+            <View style={styles.guideBadgeRow}>
+              <View style={styles.guideBadgeIcon}>
+                <ShieldCheck size={20} color="#0F172A" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.guideBadgeTitle}>NOMAD GUIDE</Text>
+                <Text style={styles.guideBadgeSub}>{myTours.length} {myTours.length === 1 ? "tour" : "tours"} created</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.createTourButton, { flex: 1 }]}
+                onPress={() => router.push("/create-tour")}
+              >
+                <Plus size={18} color="#0F172A" />
+                <Text style={styles.createTourText}>New Tour</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.createTourButton, { flex: 1, backgroundColor: "rgba(255,191,0,0.15)" }]}
+                onPress={() => router.push("/guide-dashboard")}
+              >
+                <Crown size={18} color="#FFBF00" />
+                <Text style={[styles.createTourText, { color: "#FFBF00" }]}>Dashboard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.becomeGuideButton}
+            onPress={() => router.push("/become-guide")}
+          >
+            <View style={styles.becomeGuideIcon}>
+              <Crown size={20} color="#FFBF00" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.becomeGuideTitle}>Become a Guide</Text>
+              <Text style={styles.becomeGuideSub}>Share your city, earn money</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#FFBF00" />
+          </TouchableOpacity>
+        )}
 
         <GlassCardOnLight style={styles.settingsCard}>
           {SETTINGS_ITEMS.map((item, index) => {
@@ -108,12 +214,13 @@ export default function ProfileScreen() {
                   !isLast && styles.settingsItemBorder,
                   item.highlight && styles.highlightItem,
                 ]}
-                onPress={() => 
-                  (item.id === "trips" && handleMyTrips()) ||
-                  (item.id === "edit-profile" && handleEditProfile()) ||
-                  (item.id === "interests" && handleEditInterest()) ||
-                  (item.id === "language" && handleChangeLanguage())
-                }
+                onPress={() => {
+                  if (item.id === "trips") handleMyTrips();
+                  else if (item.id === "edit-profile") handleEditProfile();
+                  else if (item.id === "interests") handleEditInterest();
+                  else if (item.id === "language") handleChangeLanguage();
+                  else if (item.id === "sos") handleSos();
+                }}
               >
                 <Ionicons
                   name={item.icon as any}
@@ -229,6 +336,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#0F172A",
   },
+  achievementsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
+  achievementBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2DD4BF",
+    backgroundColor: "rgba(45,212,191,0.06)",
+  },
+  achievementIcon: { fontSize: 14 },
+  achievementLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2DD4BF",
+    letterSpacing: 0.5,
+  },
   settingsCard: {
     borderRadius: 20,
     padding: 0,
@@ -288,6 +420,82 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontWeight: "600",
     fontSize: 16,
+  },
+  guideSection: {
+    marginBottom: 20,
+    backgroundColor: "rgba(255,191,0,0.08)",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,191,0,0.25)",
+    gap: 12,
+  },
+  guideBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  guideBadgeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFBF00",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  guideBadgeTitle: {
+    fontFamily: "Montserrat_700Bold",
+    fontSize: 14,
+    color: "#0F172A",
+    letterSpacing: 1,
+  },
+  guideBadgeSub: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  createTourButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FFBF00",
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  createTourText: {
+    color: "#0F172A",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  becomeGuideButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    backgroundColor: "rgba(255,191,0,0.06)",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,191,0,0.2)",
+    gap: 12,
+  },
+  becomeGuideIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,191,0,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  becomeGuideTitle: {
+    fontWeight: "700",
+    fontSize: 15,
+    color: "#0F172A",
+  },
+  becomeGuideSub: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
   },
   versionText: {
     textAlign: "center",

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LightScreen } from "@/components/ui/LightScreen";
@@ -8,29 +8,87 @@ import { BodyText, CaptionText } from "@/components/ui/ThemedText";
 import { AuthContext } from "@/context/authContext";
 import { Button } from "react-native-paper";
 import { useTranslation } from "react-i18next";
-import { ExploreTab } from "@/app/trips/ExploreTab";
-import { MyTripsTab } from "@/app/trips/MyTripsTab";
+import { ExploreTab } from "@/components/ExploreTab";
+import { MyTripsTab } from "@/components/MyTripsTab";
+import { useMyBookings } from "@/hooks/useTours";
+import { GlassCardOnLight } from "@/components/ui/GlassCard";
 
 export default function TripsScreen() {
   const { t } = useTranslation();
   const { user, loading } = React.useContext(AuthContext);
-  const [activeTab, setActiveTab] = React.useState<'explore' | 'my trips'>('explore');
+  const [activeTab, setActiveTab] = React.useState<'explore' | 'my trips' | 'bookings'>('explore');
+  const { data: bookings = [], isLoading: bookingsLoading } = useMyBookings(user?.id || null);
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   React.useEffect(() => {
     if (!loading && !user) router.replace("/");
   }, [loading, user]);
 
+  const pendingCount = bookings.filter(b => b.status === "pending").length;
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "explore": 
-        return (
-          <ExploreTab/>
-        )
+        return <ExploreTab />;
       case "my trips": 
+        return <MyTripsTab />;
+      case "bookings":
         return (
-          <MyTripsTab/>
-        )
+          <View>
+            {bookingsLoading ? (
+              <ActivityIndicator size="large" color="#FFBF00" style={{ marginTop: 40 }} />
+            ) : bookings.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Ionicons name="ticket-outline" size={48} color="#94A3B8" style={styles.emptyIcon} />
+                <BodyText style={styles.emptyTitle}>{t("booking.noBookings")}</BodyText>
+                <CaptionText style={styles.emptySubtitle}>{t("booking.joinFromExplore")}</CaptionText>
+              </View>
+            ) : (
+              bookings.map((b) => {
+                const statusColor = b.status === "paid" ? "#10B981" : "#FFBF00";
+                const statusLabel = b.status === "paid" ? t("tour.confirmed") : t("tour.pending");
+                return (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={styles.cardWrapper}
+                    onPress={() => router.push(`/tour/${b.tour_id}`)}
+                    activeOpacity={0.9}
+                  >
+                    <GlassCardOnLight style={styles.tripCard}>
+                      <View style={styles.tripCardContent}>
+                        {b.tour_image ? (
+                          <Image source={{ uri: b.tour_image }} style={styles.tripImage} resizeMode="cover" />
+                        ) : (
+                          <View style={[styles.tripImage, { backgroundColor: "#E2E8F0", alignItems: "center", justifyContent: "center" }]}>
+                            <Ionicons name="ticket" size={32} color="#94A3B8" />
+                          </View>
+                        )}
+                        <View style={[styles.bookedBadge, { backgroundColor: statusColor }]}>
+                          <Text style={[styles.bookedText, { color: "#FFF" }]}>{statusLabel}</Text>
+                        </View>
+                        <View style={styles.tripOverlay}>
+                          <Text style={styles.tripTitle} numberOfLines={1}>{b.tour_title}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                            <Text style={styles.tripCity}>{b.tour_city}</Text>
+                            <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
+                              · {Math.round(b.tour_price / b.tour_max_people).toLocaleString()} ₸
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
+                            {b.guide_avatar ? (
+                              <Image source={{ uri: b.guide_avatar }} style={{ width: 20, height: 20, borderRadius: 10 }} />
+                            ) : null}
+                            <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }}>{b.guide_name}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </GlassCardOnLight>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+        );
     }
   }
     
@@ -82,6 +140,22 @@ export default function TripsScreen() {
             <Text style={[styles.tabText, activeTab === 'my trips' && styles.activeTabText]}>
               {t("trips.myTrips")}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'bookings' && styles.activeTab]}
+            onPress={() => setActiveTab('bookings')}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Text style={[styles.tabText, activeTab === 'bookings' && styles.activeTabText]}>
+                {t("booking.bookings")}
+              </Text>
+              {pendingCount > 0 && (
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: "#FFBF00", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: "#0F172A", fontSize: 10, fontWeight: "800" }}>{pendingCount}</Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
         {renderTabContent()}

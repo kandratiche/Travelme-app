@@ -63,17 +63,18 @@ export async function registerUserApi(props: IRegisterUser) {
 
     const userId = authData.user.id;
 
-    const { data: profileData, error: profileError } = await supabase
-      .from("users")
-      .update({ name: name, languages: "en" })
-      .eq("id", userId)
-      .select()
-      .single();
-
-    if (profileError) {
-      console.log("Profile error:", profileError);
-      Alert.alert(t("userRegister.register"), profileError.message);
-      return null;
+    // Wait for the auth trigger to create the public.users row
+    let profileData = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 500));
+      const { data, error } = await supabase
+        .from("users")
+        .update({ name, languages: "en" })
+        .eq("id", userId)
+        .select()
+        .single();
+      if (data && !error) { profileData = data; break; }
+      console.log(`Profile update attempt ${attempt + 1} failed:`, error?.message);
     }
 
     return {

@@ -25,6 +25,13 @@ import {
 } from "@expo-google-fonts/montserrat";
 import { AuthProvider } from "@/context/authContext";
 import { Provider as PaperProvider } from "react-native-paper";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 2, staleTime: 60_000 },
+  },
+});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -56,30 +63,38 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <PaperProvider>
-          <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
-            <AuthProvider>
-              <StatusBar style="dark" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: "#F8FAFC" },
-                  animation: "fade",
-                }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="city-select" />
-                <Stack.Screen name="vibe-check" />
-                <Stack.Screen name="timeline" />
-                <Stack.Screen name="guide/[id]" />
-                <Stack.Screen name="(tabs)"/>
-              </Stack>
-            </AuthProvider>
-          </View>
-        </PaperProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <PaperProvider>
+            <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
+              <AuthProvider>
+                <StatusBar style="dark" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: "#F8FAFC" },
+                    animation: "fade",
+                  }}
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="timeline" />
+                  <Stack.Screen name="guide/[id]" />
+                  <Stack.Screen name="tour/[id]" />
+                  <Stack.Screen name="become-guide" />
+                  <Stack.Screen name="create-tour" />
+                  <Stack.Screen name="guide-dashboard" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="auth/login" />
+                  <Stack.Screen name="auth/register" />
+                  <Stack.Screen name="auth/city-select" />
+                  <Stack.Screen name="auth/vibe-check" />
+                </Stack>
+              </AuthProvider>
+            </View>
+          </PaperProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }

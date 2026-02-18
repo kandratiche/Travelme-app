@@ -51,20 +51,25 @@ export async function resolveCityId(cityName: string): Promise<string | null> {
 /**
  * Fetch all places from Supabase with full detail fields.
  */
+let _placesCache: DBPlace[] = [];
+let _placesCacheTime = 0;
+const PLACES_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
 export async function fetchAllPlaces(): Promise<DBPlace[]> {
-  const { data, error, count } = await supabase
+  if (_placesCache.length > 0 && Date.now() - _placesCacheTime < PLACES_CACHE_TTL) {
+    return _placesCache;
+  }
+
+  const { data, error } = await supabase
     .from("places")
-    .select("id, title, type, rating, safety_score, image_url, description, tags, city_id, coordinates, address, price_level, opening_hours, contact, reviews, verified", { count: "exact" });
+    .select("id, title, type, rating, safety_score, image_url, description, tags, city_id, coordinates, address, price_level, opening_hours, contact, reviews, verified");
 
   if (error || !data) {
     console.error("Failed to fetch places:", error);
-    return [];
+    return _placesCache;
   }
 
-  console.log(count)
-  console.log(data)
-
-  return data.map((p: any) => ({
+  _placesCache = data.map((p: any) => ({
     id: p.id,
     title: p.title,
     type: p.type || "",
@@ -83,6 +88,8 @@ export async function fetchAllPlaces(): Promise<DBPlace[]> {
     reviews: p.reviews || null,
     verified: p.verified || false,
   }));
+  _placesCacheTime = Date.now();
+  return _placesCache;
 }
 
 export async function fetchPlacesByCity(cityName: string): Promise<DBPlace[]> {
