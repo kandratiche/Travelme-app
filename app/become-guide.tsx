@@ -103,7 +103,7 @@ export default function BecomeGuideScreen() {
 
           <View style={styles.hero}>
             <View style={styles.heroIcon}>
-              <ShieldCheck size={40} color="#FFBF00" />
+              <ShieldCheck size={40} color="#2DD4BF" />
             </View>
             <Text style={styles.heroTitle}>{t("guide.becomeTitle")}</Text>
             <Text style={styles.heroSub}>{t("guide.becomeDesc")}</Text>
@@ -116,7 +116,7 @@ export default function BecomeGuideScreen() {
               value={bio}
               onChangeText={setBio}
               placeholder={t("guide.bioPlaceholder")}
-              placeholderTextColor="#475569"
+              placeholderTextColor="#94A3B8"
               multiline
               numberOfLines={4}
             />
@@ -127,7 +127,7 @@ export default function BecomeGuideScreen() {
               value={price}
               onChangeText={setPrice}
               placeholder="8500"
-              placeholderTextColor="#475569"
+              placeholderTextColor="#94A3B8"
               keyboardType="numeric"
             />
 
@@ -137,7 +137,7 @@ export default function BecomeGuideScreen() {
               value={whatsapp}
               onChangeText={setWhatsapp}
               placeholder={t("guide.phonePlaceholder")}
-              placeholderTextColor="#475569"
+              placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
             />
 
@@ -173,7 +173,7 @@ export default function BecomeGuideScreen() {
             onPress={handleSubmit}
             loading={loading}
             icon={<Sparkles size={20} color="#0F172A" />}
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 32 }}
           />
         </ScrollView>
       </View>
@@ -182,35 +182,35 @@ export default function BecomeGuideScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#0F172A" },
+  screen: { flex: 1, backgroundColor: "#FFF" },
   scroll: { padding: 24, paddingBottom: 60 },
   backButton: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.1)",
+    width: 40, height: 40, borderRadius: 20, backgroundColor: "#156459ff",
     alignItems: "center", justifyContent: "center", marginBottom: 16,
   },
   hero: { alignItems: "center", marginBottom: 32 },
   heroIcon: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: "rgba(255,191,0,0.15)",
+    width: 72, height: 72, borderRadius: 36, backgroundColor: "#156459ff",
     alignItems: "center", justifyContent: "center", marginBottom: 16,
   },
   heroTitle: {
-    fontFamily: "Montserrat_800ExtraBold", fontSize: 28, color: "#FFF",
+    fontFamily: "Montserrat_800ExtraBold", fontSize: 28, color: "#0F172A",
     textAlign: "center", letterSpacing: 2, lineHeight: 36,
   },
   heroSub: { color: "#94A3B8", fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
   form: { gap: 16 },
-  label: { color: "#FFBF00", fontWeight: "700", fontSize: 13, letterSpacing: 1, marginBottom: -8 },
+  label: { color: "#2DD4BF", fontWeight: "700", fontSize: 13, letterSpacing: 1, marginBottom: -8 },
   input: {
-    backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,191,0,0.2)",
-    borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, color: "#FFF", fontSize: 15,
+    backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "#156459ff",
+    borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, color: "#0F172A", fontSize: 15,
   },
   textArea: { minHeight: 100, textAlignVertical: "top" },
   chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "#94A3B8",
   },
-  chipActive: { backgroundColor: "rgba(255,191,0,0.15)", borderColor: "#FFBF00" },
+  chipActive: { backgroundColor: "#156459ff", borderColor: "#2DD4BF" },
   chipText: { color: "#94A3B8", fontSize: 13, fontWeight: "500" },
-  chipTextActive: { color: "#FFBF00", fontWeight: "700" },
+  chipTextActive: { color: "#2DD4BF", fontWeight: "700" },
 });

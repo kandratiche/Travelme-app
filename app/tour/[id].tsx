@@ -60,7 +60,7 @@ export default function TourDetailsScreen() {
   }
 
   const isPremium = tour.is_premium || tour.guide_verified;
-  const pricePerPerson = tour.max_people > 0 ? Math.round(tour.price_total / tour.max_people) : tour.price_total;
+  const priceTotal = tour.max_people > 0 ? Math.round(tour.price_per_person * tour.max_people) : tour.price_per_person;
   const myParticipation = tour.participants?.find((p) => p.user_id === user?.id && p.status !== "cancelled");
   const alreadyJoined = !!myParticipation;
   const myStatus = myParticipation?.status;
@@ -100,7 +100,7 @@ export default function TourDetailsScreen() {
 
   const handleShare = async () => {
     const deepLink = `nomadai://tour/${tour.id}`;
-    const message = `🌟 ${tour.title}\n📍 ${tour.city} · ${tour.duration_hours}h\n💰 from ${pricePerPerson.toLocaleString()} ₸/person\n\nJoin my squad! ${deepLink}`;
+    const message = `🌟 ${tour.title}\n📍 ${tour.city} · ${tour.duration_hours}h\n💰 from ${tour.price_per_person.toLocaleString()} ₸/person\n\nJoin my squad! ${deepLink}`;
     try {
       await Share.share({ message, title: tour.title });
     } catch {}
@@ -176,10 +176,10 @@ export default function TourDetailsScreen() {
           <View style={styles.priceCard}>
             <Text style={styles.priceLabel}>{t("tour.pricePerPerson")}</Text>
             <View style={styles.priceRow}>
-              <Text style={styles.priceValue}>{pricePerPerson.toLocaleString()}</Text>
+              <Text style={styles.priceValue}>{tour.price_per_person.toLocaleString()}</Text>
               <Text style={styles.priceCurrency}>₸</Text>
             </View>
-            <Text style={styles.priceTotal}>Total: {tour.price_total.toLocaleString()} ₸ for {tour.max_people} people</Text>
+            <Text style={styles.priceTotal}>Total: {priceTotal.toLocaleString()} ₸ for {tour.max_people} people</Text>
           </View>
 
           <View style={styles.partySection}>
@@ -187,7 +187,7 @@ export default function TourDetailsScreen() {
             <PartyProgress
               current={tour.participant_count || 0}
               max={tour.max_people}
-              priceTotal={tour.price_total}
+              priceTotal={priceTotal}
               participants={tour.participants}
             />
           </View>
@@ -392,7 +392,7 @@ export default function TourDetailsScreen() {
             </Text>
             <View style={styles.modalPriceRow}>
               <Text style={styles.modalPriceLabel}>Стоимость:</Text>
-              <Text style={styles.modalPrice}>{pricePerPerson.toLocaleString()} ₸/чел</Text>
+              <Text style={styles.modalPrice}>{tour.price_per_person.toLocaleString()} ₸/чел</Text>
             </View>
             <NeonButton title={t("tour.confirm")} onPress={handleConfirmJoin} loading={joinMutation.isPending} />
             <TouchableOpacity onPress={() => setShowConfirm(false)} style={styles.modalCancel}>

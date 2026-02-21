@@ -5,7 +5,7 @@ export interface DBTour {
   guide_id: string;
   title: string;
   description: string;
-  price_total: number;
+  price_per_person: number;
   max_people: number;
   duration_hours: number;
   is_premium: boolean;

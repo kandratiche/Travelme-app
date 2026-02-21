@@ -15,9 +15,9 @@ interface Props {
 export function TourCard({ tour, onPress }: Props) {
   const { t } = useTranslation();
   const isPremium = tour.is_premium || tour.guide_verified;
-  const pricePerPerson = tour.max_people > 0
-    ? Math.round(tour.price_total / tour.max_people)
-    : tour.price_total;
+  const price_total = tour.max_people > 0
+    ? Math.round(tour.price_per_person * tour.max_people)
+    : tour.price_per_person;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.wrapper}>
@@ -51,7 +51,7 @@ export function TourCard({ tour, onPress }: Props) {
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>{t("tourCard.from")}</Text>
-            <Text style={styles.price}>{pricePerPerson.toLocaleString()} ₸</Text>
+            <Text style={styles.price}>{tour.price_per_person.toLocaleString()} ₸</Text>
             <Text style={styles.priceLabel}>{t("tourCard.perPerson")}</Text>
           </View>
 
@@ -72,7 +72,7 @@ export function TourCard({ tour, onPress }: Props) {
           <PartyProgress
             current={tour.participant_count || 0}
             max={tour.max_people}
-            priceTotal={tour.price_total}
+            priceTotal={price_total}
           />
         </View>
       </GoldBorderCard>
