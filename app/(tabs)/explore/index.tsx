@@ -32,7 +32,7 @@ import { TourCard } from "@/components/TourCard";
 import { MapView, Marker, isMapAvailable } from "@/lib/maps";
 import { BottomSheet, BottomSheetView, BottomSheetBackdrop, isBottomSheetAvailable } from "@/lib/bottomSheet";
 import type { TimelineStop } from "@/types";
-
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 const { width } = Dimensions.get("window");
 
 const CITY_COORDS: Record<string, { latitude: number; longitude: number }> = {
@@ -45,7 +45,6 @@ export default function ExploreScreen() {
   const [activeTab, setActiveTab] = useState<"map" | "guides" | "places" | "tours">("map");
   const { user, loading } = useContext(AuthContext);
   const { t } = useTranslation();
-
   const cityName = user?.home_city || "Almaty";
   const { data: places = [], isLoading: placesLoading } = usePlaces({ city: cityName });
   const { data: guides = [], isLoading: guidesLoading } = useGuides(cityName);
@@ -54,11 +53,11 @@ export default function ExploreScreen() {
   const [tourSort, setTourSort] = useState<"new" | "price" | "popular">("new");
   const { data: savedIds = [] } = useSavedPlaces(user?.id || null);
   const toggleFav = useToggleSavedPlace(user?.id || "");
-
+  const tabBarHeight = useBottomTabBarHeight();
   const [selectedPlace, setSelectedPlace] = useState<DBPlace | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
   const bottomSheetRef = useRef<any>(null);
-  const snapPoints = useMemo(() => ["35%"], []);
+  const snapPoints = useMemo(() => ["45%"], []);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/");
@@ -206,7 +205,7 @@ export default function ExploreScreen() {
               backgroundStyle={styles.bottomSheetBg}
               handleIndicatorStyle={{ backgroundColor: "#CBD5E1" }}
             >
-              <BottomSheetView style={styles.sheetContent}>
+              <BottomSheetView style={[styles.sheetContent]}>
                 <View style={styles.sheetRow}>
                   {selectedPlace.image_url ? (
                     <Image source={{ uri: selectedPlace.image_url }} style={styles.sheetImage} />
@@ -538,7 +537,9 @@ const styles = StyleSheet.create({
 
   // Bottom sheet
   bottomSheetBg: { backgroundColor: "#FFF", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  sheetContent: { paddingHorizontal: 20, paddingBottom: 20 },
+  sheetContent: {
+    paddingHorizontal: 20,
+  },
   sheetRow: { flexDirection: "row", alignItems: "flex-start" },
   sheetImage: { width: 80, height: 80, borderRadius: 14 },
   sheetTitle: { fontFamily: "Montserrat_700Bold", fontSize: 18, color: "#0F172A" },
@@ -552,7 +553,7 @@ const styles = StyleSheet.create({
   sheetTags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
   tagPill: { backgroundColor: "#F1F5F9", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   tagText: { fontSize: 11, color: "#475569", fontWeight: "500" },
-  sheetActions: { flexDirection: "row", alignItems: "center", marginTop: 16, gap: 10 },
+  sheetActions: { flexDirection: "row", alignItems: "center", marginTop: 16, gap: 10, marginBottom: 100 },
   detailButton: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
     backgroundColor: "#2DD4BF", paddingVertical: 14, borderRadius: 16, gap: 8,
