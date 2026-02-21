@@ -456,6 +456,7 @@ RULES:
       const cleaned = text.replace(/```json?\s*/g, "").replace(/```/g, "").trim();
       const result = JSON.parse(cleaned) as GeminiResult;
 
+      // Validate structure
       if (!result.sections || !Array.isArray(result.sections) || result.sections.length === 0) {
         lastError = new Error(`Gemini ${model} returned invalid structure`);
         continue;
